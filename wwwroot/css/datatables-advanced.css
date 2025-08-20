@@ -1,0 +1,7 @@
+.dataTables_wrapper .dt-buttons .btn { margin-left: .25rem; }
+.dt-button-collection { right: 0 !important; left: auto !important; }
+.btn-outline-warning.active {
+  background-color: #f0ad4e;
+  color: #fff;
+  border-color: #f0ad4e;
+}

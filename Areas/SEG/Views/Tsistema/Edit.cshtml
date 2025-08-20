@@ -1,0 +1,32 @@
+@* /Areas/SEG/Views/Tsistema/Edit.cshtml *@
+@model RhSensoWeb.Models.Tsistema
+@{
+    ViewBag.Title = "Editar Sistema";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+<div class="container-fluid">
+    @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-area="SEG" asp-controller="Tsistema" asp-action="Edit" asp-route-id="@Model.Cdsistema" method="post" autocomplete="off" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                @await Html.PartialAsync("_FormFields", Model, new ViewDataDictionary(ViewData) { ["IsEdit"] = true })
+
+                <div class="mt-3 d-flex gap-2">
+                    <a asp-area="SEG" asp-controller="Tsistema" asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}

@@ -1,0 +1,1078 @@
+@{
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "UsuarioGrupo";
+    ViewBag.Controller = "UsuarioGrupo";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+
+    ViewBag.Title = "Habilitação Grupo × Funções";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+@* === PERMISSÕES (SEG / SEG_USUARIOS) === *@
+@using RhSensoWeb.Helpers
+@{
+    var acoes = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_USUARIOS");
+    bool PodeIncluir = acoes.Contains("I");
+    bool PodeAlterar = acoes.Contains("A");
+    bool PodeExcluir = acoes.Contains("E");
+    bool PodeConsultar = acoes.Contains("C");
+
+    // se não pode incluir, force o topo a esconder o botão "Novo"
+    if (!PodeIncluir) { ViewBag.HabilitaBtnNovo = false; }
+}
+
+@section styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
+    <style>
+        /* Estilos das tabelas - compactas e responsivas */
+        #tblGrupos thead th,
+        #tblFuncoesDisponiveis thead th,
+        #tblFuncoesGrupo thead th,
+        #tblBotoesFunc thead th,
+        #tblUsuariosGrupo thead th {
+            font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #676a6c;
+            vertical-align: middle;
+            padding: 4px 6px !important;
+            line-height: 1.1 !important;
+            height: 28px !important;
+            white-space: nowrap;
+        }
+
+        #tblGrupos tbody td,
+        #tblFuncoesDisponiveis tbody td,
+        #tblFuncoesGrupo tbody td,
+        #tblBotoesFunc tbody td,
+        #tblUsuariosGrupo tbody td {
+            padding: 4px 6px;
+            vertical-align: middle;
+            line-height: 1.2;
+            font-size: 12px;
+        }
+
+        /* Forçar larguras específicas para controle */
+        #tblFuncoesDisponiveis,
+        #tblFuncoesGrupo {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+            #tblFuncoesDisponiveis th:first-child,
+            #tblFuncoesGrupo th:first-child {
+                width: 80px;
+            }
+
+            #tblFuncoesDisponiveis th:last-child,
+            #tblFuncoesGrupo th:last-child {
+                width: calc(100% - 80px);
+            }
+
+            /* Truncar texto longo */
+            #tblFuncoesDisponiveis tbody td,
+            #tblFuncoesGrupo tbody td {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 0; /* Força o ellipsis funcionar */
+            }
+
+                /* Primeira coluna (código) não trunca */
+                #tblFuncoesDisponiveis tbody td:first-child,
+                #tblFuncoesGrupo tbody td:first-child {
+                    white-space: nowrap;
+                    overflow: visible;
+                    text-overflow: initial;
+                    max-width: none;
+                    font-weight: 500;
+                }
+
+        /* Container da TAB 2 - controle rígido */
+        #activity .container-fluid {
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        #activity .row {
+            margin: 0;
+        }
+
+        #activity .col-12.col-lg {
+            flex: 1 1 0%;
+            min-width: 0; /* Importante para flex shrink funcionar */
+            max-width: calc(50% - 60px); /* Deixa espaço para os botões centrais */
+        }
+
+        #activity .col-12.col-lg-auto {
+            flex: 0 0 auto;
+            width: 120px;
+        }
+
+        /* Cards das funções */
+        #activity .card {
+            height: 400px; /* Altura fixa */
+        }
+
+        #activity .card-body.p-0 {
+            height: calc(100% - 45px); /* Desconta header */
+            overflow: hidden;
+        }
+
+        #activity .table-responsive {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+            /* Scroll customizado */
+            #activity .table-responsive::-webkit-scrollbar {
+                width: 6px;
+            }
+
+            #activity .table-responsive::-webkit-scrollbar-track {
+                background: #f1f1f1;
+            }
+
+            #activity .table-responsive::-webkit-scrollbar-thumb {
+                background: #c1c1c1;
+                border-radius: 3px;
+            }
+
+                #activity .table-responsive::-webkit-scrollbar-thumb:hover {
+                    background: #a1a1a1;
+                }
+
+        /* Botões centrais */
+        #activity .d-grid {
+            padding: 10px;
+        }
+
+            #activity .d-grid .btn {
+                width: 35px;
+                height: 35px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+        /* Responsividade para tablets */
+        @@media (max-width: 991px) {
+            #activity .col-12.col-lg
+
+        {
+            max-width: 100%;
+            margin-bottom: 15px;
+        }
+
+        #activity .col-12.col-lg-auto {
+            width: 100%;
+            text-align: center;
+        }
+
+        #activity .d-grid {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        }
+
+        /* Seção inferior da TAB 2 */
+        .card-body.border-top {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .nav-link.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .nav-link:not(.disabled) {
+            transition: all 0.2s ease;
+        }
+
+        /* Loading indicator */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            0%
+
+        {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        /* Tooltips para textos truncados */
+        [data-bs-toggle="tooltip"] {
+            cursor: help;
+        }
+    </style>
+}
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-spinner"></div>
+</div>
+
+<!-- Container Toast de Alerta -->
+@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
+<!-- Body Begin -->
+<div class="row mb-2">
+    <div class="col-lg-12">
+        <form class="bg-light-subtle rounded border p-2">
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item">
+                        <a href="#overview" data-bs-toggle="tab" class="nav-link active" id="tab1-link">
+                            <i class="fa-solid fa-chart-line me-1" aria-hidden="true"></i> Lista de Grupos
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#activity" data-bs-toggle="tab" aria-expanded="true" class="nav-link disabled" id="tab2-link">
+                            Grupo x Funções
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#settings" data-bs-toggle="tab" aria-expanded="false" class="nav-link disabled" id="tab3-link">
+                            Usuários do Grupo
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- TAB 1 - Lista de Grupos -->
+                    <div class="tab-pane show active" id="overview">
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-success"><i class="fa-solid fa-plus me-1"></i>Novo</button>
+                            <button class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-download me-1"></i>Exportar</button>
+                        </div>
+
+                        <table id="tblGrupos" class="table table-striped table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 160px;">Código do Grupo</th>
+                                    <th>Descrição do Grupo</th>
+                                    <th style="width: 110px;">Sistema</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB 2 - Grupo x Funções -->
+                    <div class="tab-pane" id="activity">
+                        <div class="container-fluid">
+                            <div class="card-body">
+                                <div class="row g-3 align-items-stretch">
+                                    <!-- Esquerda: Funções Disponíveis -->
+                                    <div class="col-12 col-lg">
+                                        <div class="card h-100">
+                                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                                <strong>Funções disponíveis</strong>
+                                                <div class="input-group input-group-sm" style="max-width:260px;">
+                                                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                                    <input id="buscaFuncoesDisponiveis" type="search" class="form-control" placeholder="Buscar funções disponíveis...">
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive">
+                                                    <table id="tblFuncoesDisponiveis" class="table table-striped table-hover table-sm mb-0 dt-selectable">
+                                                        <thead class="table-light">
+                                                            <tr><th style="width:100px;">Código</th><th>Descrição</th></tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Meio: Botões de Movimentação -->
+                                    <div class="col-12 col-lg-auto d-flex justify-content-center">
+                                        <div class="d-grid gap-2 align-self-center">
+                                            <button class="btn btn-outline-primary btn-sm" id="btnAddSel" aria-label="Adicionar selecionadas">
+                                                <i class="fa-solid fa-angles-right"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" id="btnAddTodos" aria-label="Adicionar todas">
+                                                <i class="fa-solid fa-forward-fast"></i>
+                                            </button>
+                                            <hr class="my-2">
+                                            <button class="btn btn-outline-danger btn-sm" id="btnRemSel" aria-label="Remover selecionadas">
+                                                <i class="fa-solid fa-angles-left"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" id="btnRemTodos" aria-label="Remover todas">
+                                                <i class="fa-solid fa-backward-fast"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Direita: Funções do Grupo -->
+                                    <div class="col-12 col-lg">
+                                        <div class="card h-100">
+                                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                                <strong>Funções do grupo</strong>
+                                                <div class="input-group input-group-sm" style="max-width:260px;">
+                                                    <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                                    <input id="buscaFuncoesGrupo" type="search" class="form-control" placeholder="Buscar funções habilitadas...">
+                                                </div>
+                                            </div>
+
+                                            <div class="card-body p-0">
+                                                <div class="table-responsive">
+                                                    <table id="tblFuncoesGrupo" class="table table-striped table-hover table-sm mb-0 dt-selectable">
+                                                        <thead class="table-light">
+                                                            <tr><th style="width:100px;">Código</th><th>Descrição</th></tr>
+                                                        </thead>
+                                                        <tbody></tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+
+                                            <div class="card-body border-top">
+                                                <div class="row g-3">
+                                                    <div class="col-lg-8">
+                                                        <h6 class="mb-2">Botões da função: <span id="hintFunc" class="text-muted">(selecione uma função)</span></h6>
+                                                        <div class="table-responsive" style="max-height:35vh;overflow:auto;">
+                                                            <table id="tblBotoesFunc" class="table table-sm table-hover table-bordered mb-0">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th>Botão</th>
+                                                                        <th>Habilitado</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody></tbody>
+                                                            </table>
+                                                        </div>
+                                                        <div class="form-text mt-1">Marque/Desmarque os botões permitidos.</div>
+                                                    </div>
+                                                    <div class="col-lg-4">
+                                                        <h6 class="mb-2">Tipo de acesso</h6>
+                                                        <div class="card">
+                                                            <div class="card-body">
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="tipoAcesso" id="acLivre" value="L">
+                                                                    <label class="form-check-label" for="acLivre">Livre</label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="tipoAcesso" id="acPessoal" value="P">
+                                                                    <label class="form-check-label" for="acPessoal">Pessoal</label>
+                                                                </div>
+                                                                <div class="form-check">
+                                                                    <input class="form-check-input" type="radio" name="tipoAcesso" id="acCoord" value="C">
+                                                                    <label class="form-check-label" for="acCoord">Coordenador</label>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3 - Usuários do Grupo -->
+                    <div class="tab-pane" id="settings">
+                        <div class="mb-3">
+                            <div class="input-group input-group-sm" style="max-width:300px;">
+                                <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input id="buscaUsuarios" type="search" class="form-control" placeholder="Buscar usuários...">
+                            </div>
+                        </div>
+
+                        <table id="tblUsuariosGrupo" class="table table-striped table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Grupo</th>
+                                    <th>Sistema</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- AntiForgery -->
+<form id="__ajaxAntiForgery" class="d-none">
+    @Html.AntiForgeryToken()
+</form>
+
+@section scripts {
+    <script>
+        // Exponho as permissões no front
+        window.PERM_USUARIO = {
+            I: @(PodeIncluir.ToString().ToLower()),
+            A: @(PodeAlterar.ToString().ToLower()),
+            E: @(PodeExcluir.ToString().ToLower()),
+            C: @(PodeConsultar.ToString().ToLower())
+        };
+    </script>
+
+    <!-- Scripts externos -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
+    <script src="https://cdn.datatables.net/select/2.0.3/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        (() => {
+            // ============ VARIÁVEIS GLOBAIS ============
+            let grupoSelecionado = null;
+            let sistemaAtual = null;
+            let funcaoSelecionada = null;
+
+            // ============ DATATABLES ============
+            let dtGrupos, dtFuncoesDisponiveis, dtFuncoesGrupo, dtBotoesFuncao, dtUsuarios;
+
+            // ============ INICIALIZAÇÃO ============
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOM Loaded - Inicializando...');
+                inicializarDataTables();
+                configurarEventos();
+                carregarGrupos();
+                desabilitarTab2e3();
+            });
+
+            // ============ DATATABLES SETUP ============
+            function inicializarDataTables() {
+                console.log('Inicializando DataTables...');
+
+                // TAB 1 - Grupos
+                dtGrupos = $('#tblGrupos').DataTable({
+                    data: [],
+                    columns: [
+                        { data: 'cdgruser', title: 'Código do Grupo' },
+                        { data: 'dcgruser', title: 'Descrição do Grupo' },
+                        { data: 'cdsistema', title: 'Sistema' }
+                    ],
+                    select: {
+                        style: 'single',
+                        info: false
+                    },
+                    responsive: true,
+                    language: { url: 'https://cdn.datatables.net/plug-ins/2.1.5/i18n/pt-BR.json' },
+                    pageLength: 10
+                });
+
+                // TAB 2 - Funções Disponíveis (esquerda)
+                dtFuncoesDisponiveis = $('#tblFuncoesDisponiveis').DataTable({
+                    data: [],
+                    columns: [
+                        {
+                            data: 'codigo',
+                            title: 'Código',
+                            width: '80px',
+                            className: 'text-center'
+                        },
+                        {
+                            data: 'desc',
+                            title: 'Descrição',
+                            render: function(data, type, row) {
+                                if (type === 'display' && data && data.length > 35) {
+                                    return `<span title="${data}" data-bs-toggle="tooltip">${data.substring(0, 35)}...</span>`;
+                                }
+                                return data || '';
+                            }
+                        }
+                    ],
+                    select: {
+                        style: 'multi',
+                        info: false
+                    },
+                    dom: "t",
+                    paging: false,
+                    scrollY: '280px',
+                    scrollCollapse: true,
+                    autoWidth: false,
+                    columnDefs: [
+                        { targets: [0], width: '80px' },
+                        { targets: [1], width: 'auto' }
+                    ]
+                });
+
+                // TAB 2 - Funções do Grupo (direita)
+                dtFuncoesGrupo = $('#tblFuncoesGrupo').DataTable({
+                    data: [],
+                    columns: [
+                        {
+                            data: 'codigo',
+                            title: 'Código',
+                            width: '80px',
+                            className: 'text-center'
+                        },
+                        {
+                            data: 'desc',
+                            title: 'Descrição',
+                            render: function(data, type, row) {
+                                if (type === 'display' && data && data.length > 35) {
+                                    return `<span title="${data}" data-bs-toggle="tooltip">${data.substring(0, 35)}...</span>`;
+                                }
+                                return data || '';
+                            }
+                        }
+                    ],
+                    select: {
+                        style: 'single',
+                        info: false
+                    },
+                    dom: "t",
+                    paging: false,
+                    scrollY: '280px',
+                    scrollCollapse: true,
+                    autoWidth: false,
+                    columnDefs: [
+                        { targets: [0], width: '80px' },
+                        { targets: [1], width: 'auto' }
+                    ]
+                });
+
+                // TAB 2 - Botões da Função
+                dtBotoesFuncao = $('#tblBotoesFunc').DataTable({
+                    data: [],
+                    columns: [
+                        { data: 'codigo', title: 'Botão' },
+                        {
+                            data: 'habilitado',
+                            title: 'Habilitado',
+                            orderable: false,
+                            render: function(data, type, row) {
+                                return `<div class="form-check form-switch m-0">
+                                            <input class="form-check-input btn-toggle" type="checkbox"
+                                                   data-acao="${row.acao}" ${data ? 'checked' : ''}>
+                                        </div>`;
+                            }
+                        }
+                    ],
+                    dom: "t",
+                    paging: false,
+                    ordering: false
+                });
+
+                // TAB 3 - Usuários do Grupo
+                dtUsuarios = $('#tblUsuariosGrupo').DataTable({
+                    data: [],
+                    columns: [
+                        { data: 'cdusuario', title: 'Usuário' },
+                        { data: 'cdgruser', title: 'Grupo' },
+                        { data: 'cdsistema', title: 'Sistema' }
+                    ],
+                    responsive: true,
+                    language: { url: 'https://cdn.datatables.net/plug-ins/2.1.5/i18n/pt-BR.json' },
+                    pageLength: 10
+                });
+
+                console.log('DataTables inicializadas com sucesso');
+            }
+
+            // ============ EVENTOS ============
+            function configurarEventos() {
+                console.log('Configurando eventos...');
+
+                // Seleção de grupo no TAB 1
+                dtGrupos.on('select', function(e, dt, type, indexes) {
+                    if (type === 'row') {
+                        const data = dt.rows(indexes).data().toArray()[0];
+                        console.log('Grupo selecionado:', data);
+                        selecionarGrupo(data);
+                    }
+                });
+
+                dtGrupos.on('deselect', function() {
+                    console.log('Grupo desselecionado');
+                    grupoSelecionado = null;
+                    desabilitarTab2e3();
+                });
+
+                // Seleção de função no TAB 2 (lado direito)
+                dtFuncoesGrupo.on('select', function(e, dt, type, indexes) {
+                    if (type === 'row') {
+                        const data = dt.rows(indexes).data().toArray()[0];
+                        console.log('Função selecionada:', data);
+                        selecionarFuncaoParaDetalhes(data);
+                    }
+                });
+
+                dtFuncoesGrupo.on('deselect', function() {
+                    limparDetalhesFuncao();
+                });
+
+                // Botões de movimentação
+                $('#btnAddSel').on('click', adicionarFuncoesSelecionadas);
+                $('#btnAddTodos').on('click', adicionarTodasFuncoes);
+                $('#btnRemSel').on('click', removerFuncoesSelecionadas);
+                $('#btnRemTodos').on('click', removerTodasFuncoes);
+
+                // Toggle de botões
+                $('#tblBotoesFunc tbody').on('change', '.btn-toggle', atualizarPermissoesBotao);
+
+                // Radios de tipo de acesso
+                $('input[name="tipoAcesso"]').on('change', atualizarTipoAcesso);
+
+                // Busca nas tabelas
+                $('#buscaFuncoesDisponiveis').on('input', function() {
+                    dtFuncoesDisponiveis.search($(this).val()).draw();
+                });
+
+                $('#buscaFuncoesGrupo').on('input', function() {
+                    dtFuncoesGrupo.search($(this).val()).draw();
+                });
+
+                // Evento de mudança de tab
+                $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
+                    const target = $(e.target).attr('href');
+                    console.log('Tab ativada:', target);
+
+                    if (target === '#activity' && grupoSelecionado) {
+                        carregarFuncoesParaGrupo();
+                    } else if (target === '#settings' && grupoSelecionado) {
+                        carregarUsuariosGrupo();
+                    }
+                });
+
+                console.log('Eventos configurados');
+            }
+
+            // ============ FUNÇÕES PRINCIPAIS ============
+
+            // Carrega grupos do servidor
+            async function carregarGrupos() {
+                console.log('Carregando grupos...');
+                try {
+                    showLoading();
+                    const response = await fetch('/SEG/GrupoFuncao/GetGrupos');
+                    const result = await response.json();
+
+                    console.log('Response grupos:', result);
+
+                    if (result.success) {
+                        dtGrupos.clear().rows.add(result.data).draw();
+                        console.log(`${result.data.length} grupos carregados`);
+                    } else {
+                        showError('Erro ao carregar grupos: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar grupos:', error);
+                    showError('Erro ao carregar grupos: ' + error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // Seleciona um grupo e habilita TAB 2
+            function selecionarGrupo(grupo) {
+                grupoSelecionado = grupo;
+                sistemaAtual = grupo.cdsistema;
+                console.log('Grupo selecionado:', grupoSelecionado);
+
+                // Habilita TAB 2 e 3
+                habilitarTab2e3();
+            }
+
+            // Carrega funções disponíveis e do grupo
+            async function carregarFuncoesParaGrupo() {
+                if (!grupoSelecionado) return;
+
+                console.log('Carregando funções para grupo:', grupoSelecionado);
+
+                try {
+                    showLoading();
+
+                    // Carrega funções disponíveis (esquerda)
+                    const urlDisp = `/SEG/GrupoFuncao/GetFuncoesDisponiveis?cdGrUser=${encodeURIComponent(grupoSelecionado.cdgruser)}&cdSistema=${encodeURIComponent(sistemaAtual)}`;
+                    console.log('URL funções disponíveis:', urlDisp);
+
+                    const responseDisp = await fetch(urlDisp);
+                    const resultDisp = await responseDisp.json();
+
+                    // Carrega funções do grupo (direita)
+                    const urlGrupo = `/SEG/GrupoFuncao/GetFuncoesGrupo?cdGrUser=${encodeURIComponent(grupoSelecionado.cdgruser)}&cdSistema=${encodeURIComponent(sistemaAtual)}`;
+                    console.log('URL funções grupo:', urlGrupo);
+
+                    const responseGrupo = await fetch(urlGrupo);
+                    const resultGrupo = await responseGrupo.json();
+
+                    console.log('Funções disponíveis:', resultDisp);
+                    console.log('Funções do grupo:', resultGrupo);
+
+                    if (resultDisp.success && resultGrupo.success) {
+                        dtFuncoesDisponiveis.clear().rows.add(resultDisp.data).draw();
+                        dtFuncoesGrupo.clear().rows.add(resultGrupo.data).draw();
+
+                        // Inicializar tooltips após carregar dados
+                        initializeTooltips();
+
+                        // Limpa detalhes da função
+                        limparDetalhesFuncao();
+                    } else {
+                        showError('Erro ao carregar funções');
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar funções:', error);
+                    showError('Erro ao carregar funções: ' + error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // Seleciona função para mostrar detalhes (botões)
+            async function selecionarFuncaoParaDetalhes(funcao) {
+                funcaoSelecionada = funcao;
+                $('#hintFunc').text(`${funcao.codigo} - ${funcao.desc}`);
+
+                await carregarBotoesFuncao(funcao.codigo);
+
+                // Define tipo de acesso atual
+                const tipoAcesso = funcao.cdrestric || 'L';
+                const radioMap = { 'L': 'acLivre', 'P': 'acPessoal', 'C': 'acCoord' };
+                const radioId = radioMap[tipoAcesso] || 'acLivre';
+                $(`#${radioId}`).prop('checked', true);
+            }
+
+            // Carrega botões da função
+            async function carregarBotoesFuncao(cdFuncao) {
+                try {
+                    const url = `/SEG/GrupoFuncao/GetBotoesFuncao?cdFuncao=${encodeURIComponent(cdFuncao)}&cdSistema=${encodeURIComponent(sistemaAtual)}&cdGrUser=${encodeURIComponent(grupoSelecionado.cdgruser)}`;
+                    console.log('URL botões:', url);
+
+                    const response = await fetch(url);
+                    const result = await response.json();
+
+                    console.log('Botões função:', result);
+
+                    if (result.success) {
+                        dtBotoesFuncao.clear().rows.add(result.data).draw();
+                    } else {
+                        showError('Erro ao carregar botões: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar botões:', error);
+                    showError('Erro ao carregar botões: ' + error.message);
+                }
+            }
+
+            // ============ MOVIMENTAÇÃO DE FUNÇÕES ============
+
+            async function adicionarFuncoesSelecionadas() {
+                const selectedData = dtFuncoesDisponiveis.rows('.selected').data().toArray();
+                if (selectedData.length === 0) {
+                    showWarning('Selecione pelo menos uma função');
+                    return;
+                }
+
+                await moverFuncoes(selectedData, 'adicionar');
+            }
+
+            async function adicionarTodasFuncoes() {
+                const allData = dtFuncoesDisponiveis.rows().data().toArray();
+                if (allData.length === 0) {
+                    showInfo('Não há funções para adicionar');
+                    return;
+                }
+
+                await moverFuncoes(allData, 'adicionar');
+            }
+
+            async function removerFuncoesSelecionadas() {
+                const selectedData = dtFuncoesGrupo.rows('.selected').data().toArray();
+                if (selectedData.length === 0) {
+                    showWarning('Selecione pelo menos uma função');
+                    return;
+                }
+
+                await moverFuncoes(selectedData, 'remover');
+            }
+
+            async function removerTodasFuncoes() {
+                const allData = dtFuncoesGrupo.rows().data().toArray();
+                if (allData.length === 0) {
+                    showInfo('Não há funções para remover');
+                    return;
+                }
+
+                await moverFuncoes(allData, 'remover');
+            }
+
+            // Função genérica para mover funções
+            async function moverFuncoes(funcoes, acao) {
+                try {
+                    showLoading();
+
+                    const funcoesCodigos = funcoes.map(f => f.codigo);
+                    const endpoint = acao === 'adicionar' ? 'AdicionarFuncoes' : 'RemoverFuncoes';
+
+                    const response = await fetch(`/SEG/GrupoFuncao/${endpoint}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': getAntiForgeryToken()
+                        },
+                        body: JSON.stringify({
+                            cdGrUser: grupoSelecionado.cdgruser,
+                            cdSistema: sistemaAtual,
+                            funcoes: funcoesCodigos
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showSuccess(result.message);
+                        await carregarFuncoesParaGrupo();
+                        // Tooltips são inicializados dentro de carregarFuncoesParaGrupo
+                    } else {
+                        showError(result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro ao mover funções:', error);
+                    showError('Erro ao mover funções: ' + error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // ============ PERMISSÕES DOS BOTÕES ============
+
+            async function atualizarPermissoesBotao() {
+                if (!funcaoSelecionada) return;
+
+                // Coleta botões marcados
+                const botoesHabilitados = [];
+                $('#tblBotoesFunc .btn-toggle:checked').each(function() {
+                    const acao = $(this).data('acao');
+                    if (acao) {
+                        botoesHabilitados.push(acao);
+                    }
+                });
+
+                // Pega tipo de acesso selecionado
+                const tipoAcessoSelecionado = $('input[name="tipoAcesso"]:checked').val() || 'L';
+
+                await salvarPermissoesFuncao(botoesHabilitados, tipoAcessoSelecionado);
+            }
+
+            async function atualizarTipoAcesso() {
+                if (!funcaoSelecionada) return;
+
+                // Coleta botões marcados
+                const botoesHabilitados = [];
+                $('#tblBotoesFunc .btn-toggle:checked').each(function() {
+                    const acao = $(this).data('acao');
+                    if (acao) {
+                        botoesHabilitados.push(acao);
+                    }
+                });
+
+                const tipoAcessoSelecionado = $(this).val();
+                await salvarPermissoesFuncao(botoesHabilitados, tipoAcessoSelecionado);
+            }
+
+            async function salvarPermissoesFuncao(botoesHabilitados, tipoAcesso) {
+                try {
+                    const response = await fetch('/SEG/GrupoFuncao/AtualizarPermissoesFuncao', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': getAntiForgeryToken()
+                        },
+                        body: JSON.stringify({
+                            cdGrUser: grupoSelecionado.cdgruser,
+                            cdFuncao: funcaoSelecionada.codigo,
+                            cdSistema: sistemaAtual,
+                            botoesHabilitados: botoesHabilitados,
+                            tipoAcesso: tipoAcesso
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showSuccess('Permissões atualizadas!', 2000);
+                    } else {
+                        showError(result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro ao salvar permissões:', error);
+                    showError('Erro ao salvar permissões: ' + error.message);
+                }
+            }
+
+            // ============ CONTROLE DE TABS ============
+
+            function habilitarTab2e3() {
+                // Remove classes disabled das tabs
+                const tab2Link = $('a[href="#activity"]');
+                const tab3Link = $('a[href="#settings"]');
+
+                tab2Link.removeClass('disabled').css({
+                    'pointer-events': 'auto',
+                    'opacity': '1'
+                });
+
+                tab3Link.removeClass('disabled').css({
+                    'pointer-events': 'auto',
+                    'opacity': '1'
+                });
+            }
+
+            function desabilitarTab2e3() {
+                // Adiciona classes disabled nas tabs
+                const tab2Link = $('a[href="#activity"]');
+                const tab3Link = $('a[href="#settings"]');
+
+                tab2Link.addClass('disabled').css({
+                    'pointer-events': 'none',
+                    'opacity': '0.5'
+                });
+
+                tab3Link.addClass('disabled').css({
+                    'pointer-events': 'none',
+                    'opacity': '0.5'
+                });
+
+                // Volta para TAB 1
+                $('a[href="#overview"]').tab('show');
+
+                // Limpa dados das outras tabs
+                limparDadosTabs();
+            }
+
+            function limparDadosTabs() {
+                if (dtFuncoesDisponiveis) dtFuncoesDisponiveis.clear().draw();
+                if (dtFuncoesGrupo) dtFuncoesGrupo.clear().draw();
+                if (dtBotoesFuncao) dtBotoesFuncao.clear().draw();
+                if (dtUsuarios) dtUsuarios.clear().draw();
+                limparDetalhesFuncao();
+            }
+
+            function limparDetalhesFuncao() {
+                funcaoSelecionada = null;
+                $('#hintFunc').text('(selecione uma função)');
+                if (dtBotoesFuncao) dtBotoesFuncao.clear().draw();
+
+                // Limpa radios
+                $('input[name="tipoAcesso"]').prop('checked', false);
+            }
+
+            // ============ TAB 3 - USUÁRIOS ============
+
+            async function carregarUsuariosGrupo() {
+                if (!grupoSelecionado) return;
+
+                console.log('Carregando usuários do grupo:', grupoSelecionado);
+
+                try {
+                    showLoading();
+                    const url = `/SEG/GrupoFuncao/GetUsuariosGrupo?cdGrUser=${encodeURIComponent(grupoSelecionado.cdgruser)}&cdSistema=${encodeURIComponent(sistemaAtual)}`;
+                    console.log('URL usuários:', url);
+
+                    const response = await fetch(url);
+                    const result = await response.json();
+
+                    console.log('Usuários:', result);
+
+                    if (result.success) {
+                        dtUsuarios.clear().rows.add(result.data).draw();
+                    } else {
+                        showError('Erro ao carregar usuários: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Erro ao carregar usuários:', error);
+                    showError('Erro ao carregar usuários: ' + error.message);
+                } finally {
+                    hideLoading();
+                }
+            }
+
+            // ============ UTILITÁRIOS ============
+
+            function getAntiForgeryToken() {
+                return $('#__ajaxAntiForgery input[name="__RequestVerificationToken"]').val() || '';
+            }
+
+            // Inicializa tooltips do Bootstrap
+            function initializeTooltips() {
+                // Remove tooltips existentes
+                $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+
+                // Inicializa novos tooltips
+                $('[data-bs-toggle="tooltip"]').tooltip({
+                    placement: 'top',
+                    trigger: 'hover'
+                });
+            }
+
+            // Funções de notificação
+            function showSuccess(message, duration = 3000) {
+                console.log('SUCCESS:', message);
+                // Implementar conforme seu sistema de notificação
+                alert('Sucesso: ' + message);
+            }
+
+            function showError(message) {
+                console.error('ERROR:', message);
+                alert('Erro: ' + message);
+            }
+
+            function showWarning(message) {
+                console.warn('WARNING:', message);
+                alert('Aviso: ' + message);
+            }
+
+            function showInfo(message) {
+                console.info('INFO:', message);
+                alert('Info: ' + message);
+            }
+
+            function showLoading() {
+                $('#loadingOverlay').show();
+            }
+
+            function hideLoading() {
+                $('#loadingOverlay').hide();
+            }
+
+        })();
+    </script>
+}

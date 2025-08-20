@@ -1,0 +1,34 @@
+@model RhSensoWeb.Models.Const1
+@{
+    ViewData["Title"] = "Nova Constante";
+    ViewData["SubTitle"] = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <h4 class="mb-3">@ViewData["Title"]</h4>
+
+    <div asp-validation-summary="All" class="alert alert-danger @(!ViewData.ModelState.IsValid ? "" : "d-none")"></div>
+
+    <form asp-action="Create" method="post" class="card">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="Id" />
+
+        <div class="card-body">
+            @await Html.PartialAsync("_FormFields", Model)
+        </div>
+
+        <div class="card-footer d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Voltar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save me-1"></i> Salvar
+            </button>
+        </div>
+    </form>
+</div>
+
+@section scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

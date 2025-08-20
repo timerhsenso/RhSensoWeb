@@ -1,0 +1,50 @@
+@model RhSensoWeb.Models.Btfuncao
+@{
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Btfuncao";
+    ViewBag.Controller = "Btfuncao";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = false;
+
+    ViewBag.Title = "Editar Botão";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+    ViewData["IsEdit"] = true;
+}
+@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["SuccessMessage"]</div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["ErrorMessage"]</div>
+}
+
+<div class="container-fluid">
+    @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                @Html.AntiForgeryToken()
+                @* As chaves vão como hidden para garantir o post mesmo com inputs readonly *@
+                <input type="hidden" asp-for="Cdsistema" />
+                <input type="hidden" asp-for="Cdfuncao" />
+                <input type="hidden" asp-for="Nmbotao" />
+
+                @await Html.PartialAsync("_FormFields", Model)
+
+                <div class="mt-3 d-flex gap-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary"><i class="fa fa-arrow-left me-2"></i>Voltar</a>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-save me-2"></i>Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

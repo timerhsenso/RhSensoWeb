@@ -1,0 +1,47 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Página não encontrada (404)";
+}
+
+<div class="content-wrapper p-3">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-12">
+                    <h1 class="mb-0">
+                        <i class="fas fa-search me-2" aria-hidden="true"></i> Página não encontrada (404)
+                    </h1>
+                    <p class="text-muted mb-0">Não encontramos o recurso solicitado. Verifique a URL ou utilize os atalhos abaixo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12 col-lg-10 col-xl-8">
+                    <div class="card card-outline card-warning shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title mb-0">Ops, isso não deveria acontecer</h3>
+                        </div>
+                        <div class="card-body" role="alert">
+                            <ul class="mb-0">
+                                <li>Confirme se o endereço foi digitado corretamente.</li>
+                                <li>Talvez o conteúdo tenha sido movido ou você não possua acesso.</li>
+                            </ul>
+                        </div>
+                        <div class="card-footer d-flex flex-wrap gap-2">
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                                <i class="fas fa-home" aria-hidden="true"></i> Início
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()" aria-label="Voltar">
+                                <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

@@ -1,0 +1,77 @@
+@model RhSensoWeb.Models.Fucn1
+@{
+    ViewBag.Title = "Nova Função de Sistema";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+@section styles {
+    <style>
+        /* Apenas visual; o bloqueio real é no oninput + no controller */
+        .text-uppercase {
+            text-transform: uppercase;
+        }
+    </style>
+}
+
+<div class="container-fluid">
+    <h4 class="mb-3">@ViewBag.Title</h4>
+
+    <form asp-action="Create" method="post" class="card">
+        @Html.AntiForgeryToken()
+
+        <div class="card-body">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row g-3">
+                <!-- Sistema: só ativos (preenchido pelo helper PopulateSistemasSelectList) -->
+                <div class="col-md-4">
+                    <label asp-for="CdSistema" class="form-label">Sistema</label>
+                    <select asp-for="CdSistema" asp-items="ViewBag.Sistemas" class="form-select" required>
+                        <option value="">-- selecione --</option>
+                    </select>
+                    <span asp-validation-for="CdSistema" class="text-danger"></span>
+                </div>
+
+                <!-- CdFuncao: sempre MAIÚSCULO -->
+                <div class="col-md-4">
+                    <label asp-for="CdFuncao" class="form-label">Código da Função</label>
+                    <input asp-for="CdFuncao"
+                           class="form-control text-uppercase"
+                           maxlength="30"
+                           autocomplete="off"
+                           spellcheck="false"
+                           oninput="this.value=this.value.toUpperCase();" />
+                    <span asp-validation-for="CdFuncao" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="DcFuncao" class="form-label">Descrição da Função</label>
+                    <input asp-for="DcFuncao" class="form-control" maxlength="80" />
+                    <span asp-validation-for="DcFuncao" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DcModulo" class="form-label">Módulo</label>
+                    <input asp-for="DcModulo" class="form-control" maxlength="100" />
+                    <span asp-validation-for="DcModulo" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DescricaoModulo" class="form-label">Descrição do Módulo</label>
+                    <input asp-for="DescricaoModulo" class="form-control" maxlength="100" />
+                    <span asp-validation-for="DescricaoModulo" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+    </form>
+</div>
+
+@section scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

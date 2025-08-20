@@ -1,0 +1,74 @@
+@{
+    ViewBag.Title = "Acesso Negado";
+    var claims = ViewBag.Claims as List<dynamic>;
+    var session = ViewBag.Session as Dictionary<string, string>;
+    var cookies = ViewBag.Cookies as List<System.Collections.Generic.KeyValuePair<string, string>>;
+}
+
+<h2 class="text-danger">Acesso Negado</h2>
+<p>Você não tem permissão para acessar este recurso.</p>
+<hr />
+
+<h3>Claims do Usuário</h3>
+@if (claims != null && claims.Any())
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr><th>Tipo</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var c in claims)
+            {
+                <tr><td>@c.Type</td><td>@c.Value</td></tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p><em>Nenhuma claim registrada.</em></p>
+}
+
+<h3>Session</h3>
+@if (session != null && session.Any())
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr><th>Chave</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var s in session)
+            {
+                <tr><td>@s.Key</td><td>@s.Value</td></tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p><em>Nenhuma sessão registrada.</em></p>
+}
+
+<h3>Cookies</h3>
+@if (cookies != null && cookies.Any())
+{
+    <table class="table table-sm table-bordered">
+        <thead>
+            <tr><th>Nome</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var cookie in cookies)
+            {
+                <tr><td>@cookie.Key</td><td>@cookie.Value</td></tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p><em>Nenhum cookie registrado.</em></p>
+}
+
+<form asp-action="Logout" method="post">
+    <button type="submit" class="btn btn-danger mt-4">Limpar Tudo e Fazer Logout</button>
+</form>

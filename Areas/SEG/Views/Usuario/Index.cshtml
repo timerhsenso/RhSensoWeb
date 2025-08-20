@@ -1,0 +1,820 @@
+@{
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Usuario";
+    ViewBag.Controller = "Usuario";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+
+    ViewBag.Title = "Tabela de Usuários";
+    ViewBag.SubTitle = "Segurança";
+    ViewBag.Icon = "users-round"; // ícone desejado
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+@* === PERMISSÕES (SEG / SEG_USUARIOS) === *@
+@using RhSensoWeb.Helpers
+@{
+    var acoes = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_USUARIOS");
+    bool PodeIncluir = acoes.Contains("I");
+    bool PodeAlterar = acoes.Contains("A");
+    bool PodeExcluir = acoes.Contains("E");
+    bool PodeConsultar = acoes.Contains("C");
+
+    // se não pode incluir, force o topo a esconder o botão "Novo"
+    if (!PodeIncluir) { ViewBag.HabilitaBtnNovo = false; }
+}
+
+@section styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
+    <style>
+        /* Tabela compacta */
+        #tblSistemas thead th {
+            font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #676a6c;
+            vertical-align: middle;
+            padding: 4px 8px !important;
+            line-height: 1.1 !important;
+            height: 32px !important;
+        }
+
+        #tblSistemas tbody td {
+            padding: 6px 12px;
+            vertical-align: middle;
+            line-height: 1.2;
+        }
+
+        #tblSistemas .badge {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+
+        #tblSistemas .btn-group-sm .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        #tblSistemas .form-check {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #tblSistemas {
+            font-size: 14px;
+        }
+
+        /* Toolbar: TUDO à direita, numa única linha */
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        .search-fixed {
+            width: clamp(260px,38vw,520px);
+            position: relative;
+        }
+
+            .search-fixed .form-control {
+                padding-right: 36px;
+            }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            display: none;
+            z-index: 10;
+        }
+
+            .search-clear-btn.show {
+                display: block;
+            }
+
+        .toolbar-right .btn {
+            white-space: nowrap;
+        }
+
+        /* Favorito */
+        .btn-fav {
+            transition: background-color .2s,color .2s,box-shadow .2s;
+        }
+
+            .btn-fav.btn-warning, .btn-fav.btn-warning .fa-star {
+                color: #fff !important;
+            }
+
+        @@keyframes pulse {
+            0% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(1.15)
+            }
+
+            100% {
+                transform: scale(1)
+            }
+        }
+
+        .pulse-animation {
+            animation: pulse .3s ease-out;
+        }
+
+        /* Paginação à direita */
+        div.dataTables_paginate {
+            text-align: right !important;
+        }
+
+        .dataTables_paginate .pagination {
+            justify-content: flex-end !important;
+        }
+
+        /* Marcador de ColReorder */
+        .dt-colreorder-marker {
+            background: #3a3f52 !important;
+            border: 1px dashed #5c6178 !important;
+            box-shadow: 0 0 10px rgba(0,0,0,.5);
+        }
+
+        /* Resize de colunas (colResizable) */
+        #tblSistemas {
+            table-layout: auto;
+        }
+
+            #tblSistemas th, #tblSistemas td {
+                overflow: hidden;
+            }
+
+        #tblSistemas_wrapper {
+            position: relative;
+        }
+
+        .JCLRgrips {
+            z-index: 3;
+        }
+
+        .JCLRgrip {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: col-resize;
+        }
+
+            .JCLRgrip .JColResizer {
+                position: absolute;
+                right: -2px;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                border-right: 2px solid rgba(13,110,253,.25);
+            }
+
+            .JCLRgrip.dragging .JColResizer {
+                border-right-color: rgba(13,110,253,.6);
+            }
+    </style>
+
+    <style>
+        /* ...suas regras que já existem... */
+
+        /* Força o estilo “soft” no botão colvis (normal/hover/focus/active) */
+        #columnButtons .dt-button.btn-soft-primary,
+        #columnButtons .dt-button.btn-soft-primary:hover,
+        #columnButtons .dt-button.btn-soft-primary:focus,
+        #columnButtons .dt-button.btn-soft-primary:active,
+        #columnButtons .dt-button.btn-soft-primary.active {
+            background-color: var(--bs-primary-bg-subtle) !important;
+            border-color: var(--bs-primary-border-subtle) !important;
+            color: var(--bs-primary) !important;
+            box-shadow: none !important;
+        }
+
+            /* Setinha do dropdown acompanha a cor do texto */
+            #columnButtons .dt-button.btn-soft-primary .dt-down-arrow {
+                border-top-color: currentColor !important;
+            }
+    </style>
+
+}
+
+<!-- Container Toast de Alerta -->
+@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
+
+<!-- Body Begin  -->
+<div class="row mb-2">
+    <div class="col-lg-12">
+        <form class="bg-light-subtle rounded border p-2">
+            <!-- // #001 //-->
+            <div class="card-body mb-2"></div>
+            <table id="usuarioTable" class="table table-striped table-bordered w-100">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>E-mail</th>
+                        <th>Ativo</th>
+                        <th style="width:220px">Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <!-- // #001 //-->            
+        </form>
+    </div>
+</div>
+<!-- Body End  -->
+
+
+<form id="__anti" method="post">@Html.AntiForgeryToken()</form>
+
+<!-- POST correto: /SEG/UsuarioGrupo/Abrir -->
+<form id="goUsuarioGrupo" method="post" action="@Url.Action("Abrir", "UsuarioGrupo", new { area = "SEG" })" class="d-none">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="cdUsuarioID" />
+    <input type="hidden" name="dcUsuario" />
+</form>
+
+
+@section scripts {
+    <script>
+        // Exponho as permissões no front
+        window.PERM_USUARIO = {
+            I: @(PodeIncluir.ToString().ToLower()),
+            A: @(PodeAlterar.ToString().ToLower()),
+            E: @(PodeExcluir.ToString().ToLower()),
+            C: @(PodeConsultar.ToString().ToLower())
+        };
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/colresizable@1.6/colResizable-1.6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        (function () {
+            const layoutToastEl = document.getElementById('layoutToast');
+            const layoutToast = (layoutToastEl && window.bootstrap) ? new bootstrap.Toast(layoutToastEl) : null;
+
+            const exportMeta = {
+                user: '@(User?.Identity?.Name ?? "Anônimo")',
+                origem: '@($"{ViewContext.RouteData.Values["area"]}/{ViewContext.RouteData.Values["controller"]}/{ViewContext.RouteData.Values["action"]}")',
+                servertime: '@DateTime.Now.ToString("dd/MM/yyyy HH:mm")'
+            };
+
+            // Esconde o botão "Novo" do topo caso não possa incluir (procura ids e data-roles comuns)
+            document.addEventListener('DOMContentLoaded', () => {
+                if (!window.PERM_USUARIO?.I) {
+                    document.querySelectorAll('#btnNovo,[data-role="btn-novo"],a[href$="/Usuario/Create"]').forEach(el => el.classList.add('d-none'));
+                }
+            });
+
+            // Busca com botão limpar (se existir no layout)
+            const searchInput = $('#tableSearch');
+            const clearBtn = $('#clearSearch');
+            if (searchInput.length && clearBtn.length) {
+                searchInput.on('input', function () {
+                    clearBtn.toggleClass('show', this.value.length > 0);
+                    if (window.dataTable) window.dataTable.search(this.value).draw();
+                });
+                clearBtn.on('click', function () { searchInput.val('').trigger('input'); searchInput.focus(); });
+            }
+
+            // ===== DataTable (Usuario) =====
+            const $tbl = $('#usuarioTable');
+            const table = $tbl.DataTable({
+                responsive: true,
+                colReorder: false,
+                order: [],
+                stateSave: true,
+                stateDuration: -1,
+
+                processing: true, serverSide: false, autoWidth: false, deferRender: true,
+                ajax: {
+                    url: '@Url.Action("GetData", "Usuario", new { area = "SEG" })',
+                    type: 'GET', cache: false,
+                    data: d => { d._ = Date.now(); },
+                    dataSrc: json => Array.isArray(json) ? json : (json?.data || [])
+                },
+
+                columns: [
+                    { data: 'cdusuario', width: '120px' },
+                    { data: 'dcusuario' },
+                    { data: 'tpusuario', width: '80px' },
+                    { data: 'email_usuario' },
+                    {
+                        data: 'ativo',
+                        width: '90px',
+                        className: 'text-center',
+                        orderable: false,
+                        searchable: false,
+                        render: (data, _type, row) => {
+                            const id = String(row.cdusuario ?? '').trim();
+                            const isOn = (data===true || data===1 || data==='1' || data==='S');
+                            if (!(window.PERM_USUARIO && window.PERM_USUARIO.A)) {
+                                return `<span class="badge ${isOn ? 'bg-success' : 'bg-secondary'}">${isOn ? 'Ativo' : 'Inativo'}</span>`;
+                            }
+                            const checked = isOn ? 'checked' : '';
+                            return `
+                              <div class="form-check form-switch m-0 d-inline-flex align-items-center">
+                                <input type="checkbox"
+                                       class="form-check-input js-switch-ativo toggle-ativo"
+                                       data-id="${id}" ${checked}
+                                       title="${checked ? 'Desativar' : 'Ativar'}">
+                              </div>`;
+                        }
+                    },
+                    {
+                        data: null, orderable: false, searchable: false, className: 'text-end', width: '160px',
+                        render: (_d,_t,row) => {
+                            const id = row.cdusuario ?? '';
+                            const editBase = '@Url.Action("Edit", "Usuario", new { area = "SEG" })';
+                            const delBase  = '@Url.Action("Delete", "Usuario", new { area = "SEG" })';
+                            const detBase  = '@Url.Action("Details", "Usuario", new { area = "SEG" })';
+
+                            const editUrl = `${editBase}/${encodeURIComponent(id)}`;
+                            const delUrl  = `${delBase}/${encodeURIComponent(id)}`;
+                            const detUrl  = `${detBase}/${encodeURIComponent(id)}`;
+
+                            const btnEdit = `<a class="btn btn-success" href="${editUrl}" title="Editar"><i class="fa fa-pen"></i></a>`;
+
+                            // Botão "Grupos" -> envia via POST para UsuarioGrupo/Abrir
+                            const btnDet  = `<a href="#"
+                                class="btn btn-info btn-grupos"
+                                title="Grupos do usuário"
+                                data-id="${id}"
+                                data-nome="${(row.dcusuario || '').replace(/"/g,'&quot;')}">
+                                  <i class="fa fa-users"></i>
+                              </a>`;
+
+                            const btnDelT = `<button type="button" class="btn btn-danger btn-delete" data-token="${row.deleteToken || ''}" title="Excluir"><i class="fa fa-trash"></i></button>`;
+
+                            let html = `<div class="btn-group btn-group-sm" role="group">`;
+                            if (window.PERM_USUARIO?.A) html += btnEdit;
+                            if (window.PERM_USUARIO?.C) html += btnDet;
+                            if (window.PERM_USUARIO?.E) html += btnDelT;
+                            html += `</div>`;
+                            return html;
+                        }
+                    }
+                ],
+
+                dom: 'rt<"row mt-3 align-items-center"<"col-12 col-md-6 text-start"i><"col-12 col-md-6 text-end"p>>',
+
+                language: {
+                    info: "Mostrando _START_ a _END_ de _TOTAL_",
+                    paginate: { previous: "Anterior", next: "Próximo" },
+                    zeroRecords: "Nada encontrado",
+                    infoEmpty: "Sem registros",
+                    infoFiltered: "(filtrado de _MAX_ no total)"
+                },
+
+                initComplete: function () {
+                    const api = this.api();
+                    window.dataTable = api;
+
+                    new $.fn.dataTable.Buttons(api, {
+                        buttons: [
+                            { extend: 'excelHtml5', title: 'Usuários', name: 'excel',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' } },
+                            { extend: 'csvHtml5',   title: 'Usuários', name: 'csv',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' } },
+                            { extend: 'pdfHtml5',   title: 'Usuários', name: 'pdf',
+                              orientation: 'landscape', pageSize: 'A4',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' },
+                              customize: function (doc) {
+                                  doc.pageMargins = [40, 60, 40, 40];
+                                  doc.header = () => ({ margin: [40, 20, 40, 0],
+                                      columns: [
+                                          { text: 'Relatório — Usuários', alignment: 'left', fontSize: 10, bold: true },
+                                          { text: `Origem: ${exportMeta.origem}`, alignment: 'right', fontSize: 8 }
+                                      ]});
+                                  doc.footer = (currentPage, pageCount) => ({ margin: [40, 0, 40, 0],
+                                      columns: [
+                                          { text: `Gerado por: ${exportMeta.user} • ${exportMeta.servertime}`, alignment: 'left', fontSize: 8 },
+                                          { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8 }
+                                      ]});
+                              } },
+                            { extend: 'print', title: 'Usuários', name: 'print',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' },
+                              messageTop: () => `Origem: ${exportMeta.origem}`,
+                              messageBottom: () => `Gerado por: ${exportMeta.user} • ${exportMeta.servertime}`,
+                              customize: function (win) {
+                                  const css = `@@page { margin: 20mm; } table{page-break-inside:auto} tr{page-break-inside:avoid;page-break-after:auto}`;
+                                  $(win.document.head).append('<style>' + css + '</style>');
+                              } }
+                        ]
+                    });
+
+                    $('#exportExcel').on('click', e => { e.preventDefault(); api.button('excel:name').trigger(); });
+                    $('#exportCsv')  .on('click', e => { e.preventDefault(); api.button('csv:name').trigger();   });
+                    $('#exportPdf')  .on('click', e => { e.preventDefault(); api.button('pdf:name').trigger();   });
+                    $('#exportPrint').on('click', e => { e.preventDefault(); api.button('print:name').trigger(); });
+
+                    function enableColResize() {
+                        const $t = $tbl;
+                        try { $t.colResizable({ disable: true }); } catch (e) {}
+                        const lastIdx = api.columns().indexes().length - 1;
+                        try {
+                            $t.colResizable({
+                                liveDrag: true, headerOnly: true, minWidth: 60,
+                                resizeMode: 'overflow', draggingClass: 'dragging',
+                                disabledColumns: [0, lastIdx], partialRefresh: true
+                            });
+                        } catch(e){}
+                    }
+                    enableColResize();
+                    api.on('column-reorder.dt draw.dt responsive-resize.dt', enableColResize);
+                    let t; $(window).on('resize', function(){ clearTimeout(t); t = setTimeout(enableColResize, 150); });
+                }
+            });
+
+        })();
+    </script>
+
+    <!-- Botão "Grupos": envia CdUsuarioID e DcUsuario para SEG/UsuarioGrupo/Abrir (POST) -->
+    <script>
+        // Token antiforgery global
+        function anti() {
+          return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value
+              || document.querySelector('#__anti input[name="__RequestVerificationToken"]')?.value
+              || document.querySelector('input[name="__RequestVerificationToken"]')?.value
+              || '';
+        }
+
+        // Gera e envia um POST para /SEG/UsuarioGrupo/Abrir
+        function postAbrirUsuarioGrupo(cdUsuario, dcUsuario) {
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = '@Url.Action("Abrir", "UsuarioGrupo", new { area = "SEG" })';
+          form.className = 'd-none';
+
+          const tok = anti();
+          if (tok) {
+            const hTok = document.createElement('input');
+            hTok.type = 'hidden';
+            hTok.name = '__RequestVerificationToken';
+            hTok.value = tok;
+            form.appendChild(hTok);
+          }
+
+          const h1 = document.createElement('input');
+          h1.type = 'hidden'; h1.name = 'cdUsuarioID'; h1.value = String(cdUsuario||'').trim();
+          const h2 = document.createElement('input');
+          h2.type = 'hidden'; h2.name = 'dcUsuario';  h2.value = dcUsuario || '';
+
+          form.append(h1, h2);
+          document.body.appendChild(form);
+          form.submit();
+        }
+
+        // Clique no botão "Grupos" (olho / usuários)
+        $(document).on('click', '#usuarioTable a.btn-info.btn-grupos', function (e) {
+          e.preventDefault();
+          let cd = this.dataset.id || '';
+          let nome = this.dataset.nome || '';
+
+          // Fallback: se por algum motivo não vier via data-*
+          if (!cd) {
+            const dt = window.dataTable || ($('#usuarioTable').length ? $('#usuarioTable').DataTable() : null);
+            if (dt) {
+              const $tr = $(this).closest('tr');
+              const data = dt.row($tr.hasClass('child') ? $tr.prev() : $tr).data();
+              if (data) { cd = data.cdusuario; nome = data.dcusuario; }
+            }
+          }
+
+          if (!cd) return; // nada a enviar
+          postAbrirUsuarioGrupo(cd, nome);
+        });
+    </script>
+
+    <!-- Exclusão por token (compatível com link e botão) -->
+    <script>
+        (function() {
+            const delByTokenUrl = '/SEG/Usuario/DeleteByToken';
+
+            function antiLocal() {
+                return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value
+                    || document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                    || '';
+            }
+
+            function getRowData(el) {
+                const dt = window.dataTable;
+                if (!dt) return null;
+                const $tr = $(el).closest('tr');
+                return dt.row($tr.hasClass('child') ? $tr.prev() : $tr).data() || null;
+            }
+
+            $(document).on('click', '#usuarioTable a.btn-danger[href*="/Usuario/Delete/"]', async function(e) {
+                e.preventDefault();
+                if (!(window.PERM_USUARIO && window.PERM_USUARIO.E)) return;
+                const href = this.href;
+                const match = href.match(/\/Delete\/([^/?#]+)/i);
+                const id = match ? decodeURIComponent(match[1]) : '';
+                const row = getRowData(this);
+                const token = row?.deleteToken || '';
+
+                try {
+                    if (window.confirmModal) {
+                        await window.confirmModal({
+                            title: 'Excluir registro',
+                            message: `Confirma excluir o item <strong>${id || ''}</strong>? Esta ação não pode ser desfeita.`,
+                            okText: 'Excluir', okClass: 'btn-danger'
+                        });
+                    } else if (!confirm(`Excluir ${id}?`)) { return; }
+                } catch { return; }
+
+                const url = token ? delByTokenUrl : href;
+                const options = {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': antiLocal()
+                    }
+                };
+                if (token) {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify({ token });
+                }
+
+                const res = await fetch(url, options);
+                if (!res.ok) {
+                    const err = await res.text();
+                    showToast({ title: 'Erro', message: err || 'Falha ao excluir.', variant: 'danger' });
+                    return;
+                }
+                window.dataTable.ajax.reload(null, false);
+                showToast({ title: 'Sucesso', message: 'Registro excluído com sucesso.', variant: 'success' });
+            });
+
+            $(document).on('click', '#usuarioTable .btn-delete', async function () {
+                if (!(window.PERM_USUARIO && window.PERM_USUARIO.E)) return;
+                const token = this.getAttribute('data-token') || '';
+                const row = getRowData(this);
+                const id = row?.cdusuario || '';
+
+                try {
+                    if (window.confirmModal) {
+                        await window.confirmModal({
+                            title: 'Excluir registro',
+                            message: `Confirma excluir o item <strong>${id || ''}</strong>? Esta ação não pode ser desfeita.`,
+                            okText: 'Excluir', okClass: 'btn-danger'
+                        });
+                    } else if (!confirm(`Excluir ${id}?`)) { return; }
+                } catch { return; }
+
+                const res = await fetch(delByTokenUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'RequestVerificationToken': antiLocal()
+                    },
+                    body: JSON.stringify({ token })
+                });
+                if (!res.ok) {
+                    const err = await res.text();
+                    showToast({ title: 'Erro', message: err || 'Falha ao excluir.', variant: 'danger' });
+                    return;
+                }
+                window.dataTable.ajax.reload(null, false);
+                showToast({ title: 'Sucesso', message: 'Registro excluído com sucesso.', variant: 'success' });
+            });
+
+        })();
+    </script>
+
+    <!-- Modal de confirmação reutilizável -->
+    <script>
+        (function() {
+            const confirmModalEl = document.getElementById('appConfirmModal');
+            if (!confirmModalEl) return;
+
+            window.confirmModal = function(options = {}) {
+                return new Promise((resolve, reject) => {
+                    const bsModal = bootstrap.Modal.getOrCreateInstance(confirmModalEl);
+
+                    const modalTitle = confirmModalEl.querySelector('.modal-title');
+                    const modalBody = confirmModalEl.querySelector('.modal-body');
+                    const footer = confirmModalEl.querySelector('.modal-footer');
+
+                    const okButton =
+                        confirmModalEl.querySelector('[data-role="ok"]') ||
+                        (footer ? footer.querySelector('.btn:not(.btn-secondary):not(.btn-link)') : null);
+                    const cancelButton =
+                        confirmModalEl.querySelector('[data-role="cancel"]') ||
+                        (footer ? footer.querySelector('.btn.btn-secondary') : null);
+                    const closeButton = confirmModalEl.querySelector('.btn-close');
+
+                    options = { title:'Confirmação', message:'Você tem certeza?', okText:'OK', cancelText:'Cancelar', okClass:'btn-primary', ...options };
+
+                    if (!okButton || !cancelButton) { console.error('Modal de confirmação sem botões esperados.'); return reject(new Error('Modal de confirmação não está configurado.')); }
+
+                    modalTitle && (modalTitle.textContent = options.title);
+                    modalBody && (modalBody.innerHTML = options.message);
+                    okButton.textContent = options.okText;
+                    cancelButton.textContent = options.cancelText;
+
+                    (function normalizeOkButtonClass() {
+                        const variants = [
+                            'btn-primary','btn-secondary','btn-success','btn-danger','btn-warning','btn-info','btn-dark',
+                            'btn-outline-primary','btn-outline-secondary','btn-outline-success','btn-outline-danger',
+                            'btn-outline-warning','btn-outline-info','btn-outline-dark'
+                        ];
+                        okButton.classList.add('btn');
+                        variants.forEach(v => okButton.classList.remove(v));
+                        options.okClass.split(/\s+/).forEach(c => c && okButton.classList.add(c));
+                    })();
+
+                    let decided = false;
+                    const cleanup = () => {
+                        okButton.removeEventListener('click', handleOk);
+                        cancelButton.removeEventListener('click', handleCancel);
+                        closeButton && closeButton.removeEventListener('click', handleCancel);
+                        confirmModalEl.removeEventListener('hidden.bs.modal', handleHide);
+                    };
+                    const handleOk = () => { if (decided) return; decided = true; cleanup(); resolve(); bsModal.hide(); };
+                    const handleCancel = () => { if (decided) return; decided = true; cleanup(); reject(new Error('Ação cancelada pelo usuário.')); bsModal.hide(); };
+                    const handleHide = () => { if (decided) return; decided = true; cleanup(); reject(new Error('Ação cancelada pelo usuário.')); };
+
+                    okButton.addEventListener('click', handleOk);
+                    cancelButton.addEventListener('click', handleCancel);
+                    closeButton && closeButton.addEventListener('click', handleCancel);
+                    confirmModalEl.addEventListener('hidden.bs.modal', handleHide);
+
+                    bsModal.show();
+                });
+            };
+        })();
+    </script>
+
+    <!-- Bulk delete utilitário -->
+    <script>
+        (function () {
+          if (!window.DT) window.DT = {};
+
+          window.DT.bulkDelete = async function (cfg) {
+            const { tableId='usuarioTable', deleteBaseUrl='/SEG/Usuario/Delete', method='POST', itemSelector='.row-check', masterSelector='#checkAll' } = cfg || {};
+            const api = window.dataTable || (tableId ? $('#' + tableId).DataTable() : null);
+            if (!api) { showToast({ title: 'Aviso', message: 'Tabela não inicializada.', variant: 'info' }); return; }
+
+            const nodes = api.rows({ page: 'current' }).nodes();
+            const ids = $(nodes).find(itemSelector + ':checked').map((_, el) => String(el.value || '').trim()).get();
+            if (!ids.length) { showToast({ title: 'Atenção', message: 'Selecione ao menos um registro.', variant: 'warning' }); return; }
+
+            try {
+              if (window.confirmModal) {
+                await window.confirmModal({ title:'Excluir selecionados', message:`Você está prestes a excluir <b>${ids.length}</b> registro(s). Deseja continuar?`, okText:'Excluir', cancelText:'Cancelar', okClass:'btn-danger' });
+              } else if (!window.confirm(`Excluir ${ids.length} registro(s)?`)) { return; }
+            } catch { return; }
+
+            const headers = { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' };
+            const afToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+            let ok = 0, fail = 0, lastError = '';
+            for (const id of ids) {
+              const url = `${deleteBaseUrl}/${encodeURIComponent(id)}`;
+              try {
+                const res = await fetch(url, { method, headers, credentials:'same-origin', body: new URLSearchParams({ '__RequestVerificationToken': afToken }) });
+                if (!res.ok) { let body=''; try{body=await res.text();}catch{}; if (res.status===429) body = body || 'Muitas operações em sequência. Aguarde alguns segundos.'; fail++; lastError = `${res.status} ${res.statusText}${body ? ' — ' + body : ''}`; }
+                else { ok++; }
+              } catch (err) { fail++; lastError = (err && err.message) || 'Erro desconhecido'; }
+            }
+
+            if (masterSelector) { const master = document.querySelector(masterSelector); if (master) { master.checked = false; master.indeterminate = false; } }
+            api.ajax.reload(null, false);
+
+            if (fail === 0)      showToast({ title: 'Sucesso', message: `${ok} registro(s) excluído(s).`, variant: 'success' });
+            else if (ok === 0)   showToast({ title: 'Erro', message: `Nenhum excluído. ${lastError || ''}`.trim(), variant: 'danger' });
+            else                 showToast({ title: 'Parcial', message: `Excluídos: ${ok} • Falharam: ${fail}${lastError ? ` — ${lastError}` : ''}`, variant: 'warning' });
+          };
+        })();
+    </script>
+
+    <!-- UpdateAtivo com debounce + abort -->
+    <script>
+        (function () {
+          const updateUrl = '@Url.Action("UpdateAtivo", "Usuario", new { area = "SEG" })';
+
+          function getAfToken() {
+            const el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+          }
+
+          const pending = new Map();
+
+          $(document).on('change', '#usuarioTable .js-switch-ativo, #usuarioTable .toggle-ativo', function () {
+            if (!(window.PERM_USUARIO && window.PERM_USUARIO.A)) { this.checked = !this.checked; return; }
+            const el = this;
+            const id = String(el.dataset.id || '').trim();
+            const desired = el.checked;
+            if (!id) return;
+
+            const prev = pending.get(id);
+            if (prev) { if (prev.timer) clearTimeout(prev.timer); if (prev.controller) prev.controller.abort(); }
+
+            el.disabled = true;
+            const controller = new AbortController();
+
+            const timer = setTimeout(async () => {
+              try {
+                const res = await fetch(updateUrl, {
+                  method: 'POST',
+                  signal: controller.signal,
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': getAfToken()
+                  },
+                  body: new URLSearchParams({ id, ativo: desired })
+                });
+
+                if (!res.ok) {
+                  if (res.status === 429) throw new Error('Muitas alterações em sequência. Tente novamente em instantes.');
+                  throw new Error(await res.text());
+                }
+
+                const json = await res.json();
+                if (!json.success) throw new Error(json.message || 'Falha ao atualizar.');
+
+                showToast({ title:'Sucesso', message: json.message || (desired ? 'Usuário ativado.' : 'Usuário desativado.'), variant:'success' });
+              } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                el.checked = !desired;
+                showToast({ title:'Erro', message: (err && err.message) ? err.message : 'Não foi possível atualizar.', variant:'danger' });
+              } finally {
+                el.disabled = false;
+                pending.delete(id);
+              }
+            }, 500);
+
+            pending.set(id, { timer, controller });
+          });
+        })();
+    </script>
+
+    <!-- Toast utilitário -->
+    <script>
+        window.showToast = function ({ title = 'Aviso', message = '', variant = 'info', delay = 3500 } = {}) {
+          const toastEl = document.getElementById('layoutToast');
+          if (!toastEl || !window.bootstrap) { if (message) alert(message); return; }
+
+          const header = toastEl.querySelector('.toast-header');
+          const titleEl = toastEl.querySelector('.toast-header .me-auto');
+          const bodyEl  = toastEl.querySelector('.toast-body');
+
+          if (titleEl)  titleEl.textContent = title;
+          if (bodyEl)   bodyEl.textContent = message;
+
+          header.classList.remove('bg-success','bg-danger','bg-warning','bg-info','text-white');
+          const map = { success:'bg-success', danger:'bg-danger', warning:'bg-warning', info:'bg-info' };
+          if (map[variant]) header.classList.add(map[variant], 'text-white');
+
+          bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: true, delay }).show();
+        };
+    </script>
+
+    <!-- Relógio (se você usa no topo) -->
+    <script>
+        function getFormattedDateTime() {
+            const date = new Date();
+            const formattedDate = date.toLocaleDateString('pt-BR', { year:'numeric', month:'long', day:'numeric' });
+            const formattedTime = date.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+            return `Hoje é ${formattedDate}. São ${formattedTime}`;
+        }
+        function startClock(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            function tick(){ el.textContent = getFormattedDateTime(); }
+            setInterval(tick, 1000); tick();
+        }
+        document.addEventListener("DOMContentLoaded", function() { startClock("meuRelogio"); });
+    </script>
+}

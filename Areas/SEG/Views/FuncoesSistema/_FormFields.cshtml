@@ -1,0 +1,33 @@
+@model RhSensoWeb.Models.Fucn1
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label asp-for="CdSistema" class="form-label"></label>
+        <input asp-for="CdSistema" class="form-control" />
+        <span asp-validation-for="CdSistema" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="CdFuncao" class="form-label"></label>
+        <input asp-for="CdFuncao" class="form-control" />
+        <span asp-validation-for="CdFuncao" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="DcFuncao" class="form-label"></label>
+        <input asp-for="DcFuncao" class="form-control" />
+        <span asp-validation-for="DcFuncao" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="DcModulo" class="form-label"></label>
+        <input asp-for="DcModulo" class="form-control" />
+        <span asp-validation-for="DcModulo" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="DescricaoModulo" class="form-label"></label>
+        <input asp-for="DescricaoModulo" class="form-control" />
+        <span asp-validation-for="DescricaoModulo" class="text-danger"></span>
+    </div>
+</div>

@@ -1,0 +1,99 @@
+@model RhSensoWeb.Models.Tuse1
+@{
+    var actionName = (ViewContext?.RouteData?.Values?["action"]?.ToString() ?? "").ToLowerInvariant();
+    var isEdit = actionName == "edit";
+}
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label asp-for="Cdusuario" class="form-label"></label>
+        <input asp-for="Cdusuario" class="form-control" @@(isEdit ? "readonly" : "") />
+        <span asp-validation-for="Cdusuario" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-8">
+        <label asp-for="Dcusuario" class="form-label"></label>
+        <input asp-for="Dcusuario" class="form-control" />
+        <span asp-validation-for="Dcusuario" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Senhauser" class="form-label"></label>
+        <input asp-for="Senhauser" class="form-control" />
+        <span asp-validation-for="Senhauser" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-8">
+        <label asp-for="Nmimpcche" class="form-label"></label>
+        <input asp-for="Nmimpcche" class="form-control" />
+        <span asp-validation-for="Nmimpcche" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-2">
+        <label asp-for="Tpusuario" class="form-label"></label>
+        <input asp-for="Tpusuario" class="form-control" maxlength="1" />
+        <span asp-validation-for="Tpusuario" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-2">
+        <label asp-for="Nomatric" class="form-label"></label>
+        <input asp-for="Nomatric" class="form-control" maxlength="8" />
+        <span asp-validation-for="Nomatric" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-2">
+        <label asp-for="Cdempresa" class="form-label"></label>
+        <input asp-for="Cdempresa" class="form-control" />
+        <span asp-validation-for="Cdempresa" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-2">
+        <label asp-for="Cdfilial" class="form-label"></label>
+        <input asp-for="Cdfilial" class="form-control" />
+        <span asp-validation-for="Cdfilial" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-2">
+        <label asp-for="Nouser" class="form-label"></label>
+        <input asp-for="Nouser" class="form-control" />
+        <span asp-validation-for="Nouser" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Email_usuario" class="form-label"></label>
+        <input asp-for="Email_usuario" class="form-control" />
+        <span asp-validation-for="Email_usuario" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <div class="form-check form-switch mt-4">
+            <input asp-for="Ativo" class="form-check-input" />
+            <label asp-for="Ativo" class="form-check-label"></label>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="form-check form-switch mt-4">
+            <input asp-for="NaoRecebeEmail" class="form-check-input" />
+            <label asp-for="NaoRecebeEmail" class="form-check-label"></label>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="Id" class="form-label"></label>
+        <input asp-for="Id" class="form-control" />
+        <span asp-validation-for="Id" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="NormalizedUsername" class="form-label"></label>
+        <input asp-for="NormalizedUsername" class="form-control" />
+        <span asp-validation-for="NormalizedUsername" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="IdFuncionario" class="form-label"></label>
+        <input asp-for="IdFuncionario" class="form-control" />
+        <span asp-validation-for="IdFuncionario" class="text-danger"></span>
+    </div>
+</div>

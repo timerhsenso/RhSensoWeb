@@ -1,0 +1,120 @@
+﻿@{
+
+/*    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Tsistema";
+    ViewBag.Controller = "";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+    ViewBag.HabilitaBtnMostraCamposAdicionais = true; */
+    
+
+    // 1) Área: ViewBag.Areas -> rota -> ""
+    var area = (ViewBag.Areas as string)
+               ?? (ViewContext.RouteData.Values["area"] as string)
+               ?? "";
+
+    // 2) Controller (ordem pedida): ViewBag.Controller -> ViewBag.Views -> rota -> ""
+    var controller =
+        !string.IsNullOrWhiteSpace(ViewBag.Controller as string) ? (string)ViewBag.Controller :
+        !string.IsNullOrWhiteSpace(ViewBag.Views as string) ? (string)ViewBag.Views :
+        (ViewContext.RouteData.Values["controller"] as string) ?? "";
+
+
+    // 4) Flags (duplicidade de HabilitaBtnExportar não atrapalha; o último valor prevalece)
+    var habilitabtnovo = (ViewBag.HabilitaBtnNovo as bool?) ?? true;
+    var showExport = (ViewBag.HabilitaBtnExportar as bool?) ?? true;
+    var showcolumns = (ViewBag.HabilitaBtnMostraCamposAdicionais as bool?) ?? true;
+
+}
+
+<!-- Topbar Start -->
+
+<div class="row mb-2">
+        <div class="col-lg-12">
+            <form class="bg-light-subtle rounded border p-2">
+                <div class="d-flex flex-wrap justify align-items-center gap-3">
+                    <div class="d-lg-none d-flex gap-2">
+                        <button class="btn btn-default btn-icon" type="button" data-bs-toggle="offcanvas" data-bs-target="#productFillterOffcanvas" aria-controls="productFillterOffcanvas">
+                            <i class="ti ti-menu-2 fs-lg"></i>
+                        </button>
+                    </div>
+                    <h3 class="mb-0 fs-xl flex-grow-1">
+                        <!---->
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            <input id="tableSearch" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
+                            <button type="button" class="search-clear-btn" id="clearSearch" title="Limpar">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        <!---->
+                    </h3>
+
+                    <div class="d-flex gap-1">
+                        <!---->
+                    @* Botão Novo *@
+                    @if (habilitabtnovo && !string.IsNullOrWhiteSpace(controller))
+                    {
+                        <a class="btn btn-info ms-1"
+                           href="@Url.Action("Create", controller, new { area = area })">
+                            <i data-lucide="plus" class="fs-sm me-3"></i> Novo
+                        </a>
+                    }
+
+                        <!---->
+                    @* Export dropdown *@
+                    @if (showExport)
+                    {
+                        <div class="dropdown">
+                            <a href="#" class="btn btn-soft-primary btn-icon" role="button"
+                               data-bs-toggle="dropdown" aria-expanded="false" title="Exportar">
+                                <i data-lucide="file-down" class="fs-lg"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" id="exportExcel"><i class="fa fa-file-excel text-success me-2"></i>Excel</a></li>
+                                <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
+                                <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
+                                <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                            </ul>
+                        </div>
+                    }
+
+                        <!---->
+
+                        <div id="columnButtons"></div>
+
+                        <!---->
+
+                    <div class="dropdown">
+                        <a href="#" class="btn btn-soft-primary btn-icon" role="button"
+                           data-bs-toggle="dropdown" aria-expanded="false" title="Exportar">
+                            <i data-lucide="ellipsis-vertical" class="fs-lg"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+
+                            <li>
+                                <a class="dropdown-item text-danger" href="#"
+                                   onclick="DT.bulkDelete({ tableId: 'tblSistemas', deleteBaseUrl: '@Url.Action("Delete", "Tsistema", new { area = "SEG" })', method: 'POST' }); return false;">
+                                    <i class="fa fa-trash me-2"></i>Excluir selecionados
+                                </a>
+                            </li>
+
+                            <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
+                            <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
+                            <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                        </ul>
+                    </div>
+
+                        <!--
+                        <a href="#" class="btn btn-soft-primary btn-icon">
+                            <i data-lucide="star" class="fs-lg"></i>
+                        </a>
+                        -->
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+<!-- Topbar End -->

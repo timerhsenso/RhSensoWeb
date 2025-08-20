@@ -1,0 +1,798 @@
+@{
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Tsistema";
+    ViewBag.Controller = "Tsistema";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;    
+    //
+    ViewBag.Title = "Tabela de Sistemas";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+    
+}
+
+@section styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
+    <style>
+        /* Tabela compacta */
+        #tblSistemas thead th {
+            font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: #676a6c;
+            vertical-align: middle;
+            padding: 4px 8px !important;
+            line-height: 1.1 !important;
+            height: 32px !important;
+        }
+
+        #tblSistemas tbody td {
+            padding: 6px 12px;
+            vertical-align: middle;
+            line-height: 1.2;
+        }
+
+        #tblSistemas .badge {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+
+        #tblSistemas .btn-group-sm .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        #tblSistemas .form-check {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #tblSistemas {
+            font-size: 14px;
+        }
+
+        /* Toolbar: TUDO à direita, numa única linha */
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        .search-fixed {
+            width: clamp(260px,38vw,520px);
+            position: relative;
+        }
+
+            .search-fixed .form-control {
+                padding-right: 36px;
+            }
+
+        .search-clear-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #6c757d;
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            display: none;
+            z-index: 10;
+        }
+
+            .search-clear-btn.show {
+                display: block;
+            }
+
+        .toolbar-right .btn {
+            white-space: nowrap;
+        }
+
+        /* Favorito */
+        .btn-fav {
+            transition: background-color .2s,color .2s,box-shadow .2s;
+        }
+
+            .btn-fav.btn-warning, .btn-fav.btn-warning .fa-star {
+                color: #fff !important;
+            }
+
+        @@keyframes pulse {
+            0% {
+                transform: scale(1)
+            }
+
+            50% {
+                transform: scale(1.15)
+            }
+
+            100% {
+                transform: scale(1)
+            }
+        }
+
+        .pulse-animation {
+            animation: pulse .3s ease-out;
+        }
+
+        /* Paginação à direita */
+        div.dataTables_paginate {
+            text-align: right !important;
+        }
+
+        .dataTables_paginate .pagination {
+            justify-content: flex-end !important;
+        }
+
+        /* Marcador de ColReorder */
+        .dt-colreorder-marker {
+            background: #3a3f52 !important;
+            border: 1px dashed #5c6178 !important;
+            box-shadow: 0 0 10px rgba(0,0,0,.5);
+        }
+
+        /* Resize de colunas (colResizable) */
+        #tblSistemas {
+            table-layout: auto;
+        }
+
+            #tblSistemas th, #tblSistemas td {
+                overflow: hidden;
+            }
+
+        #tblSistemas_wrapper {
+            position: relative;
+        }
+
+        .JCLRgrips {
+            z-index: 3;
+        }
+
+        .JCLRgrip {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            cursor: col-resize;
+        }
+
+            .JCLRgrip .JColResizer {
+                position: absolute;
+                right: -2px;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                border-right: 2px solid rgba(13,110,253,.25);
+            }
+
+            .JCLRgrip.dragging .JColResizer {
+                border-right-color: rgba(13,110,253,.6);
+            }
+    </style>
+
+    <style>
+        /* ...suas regras que já existem... */
+
+        /* Força o estilo “soft” no botão colvis (normal/hover/focus/active) */
+        #columnButtons .dt-button.btn-soft-primary,
+        #columnButtons .dt-button.btn-soft-primary:hover,
+        #columnButtons .dt-button.btn-soft-primary:focus,
+        #columnButtons .dt-button.btn-soft-primary:active,
+        #columnButtons .dt-button.btn-soft-primary.active {
+            background-color: var(--bs-primary-bg-subtle) !important;
+            border-color: var(--bs-primary-border-subtle) !important;
+            color: var(--bs-primary) !important;
+            box-shadow: none !important;
+        }
+
+            /* Setinha do dropdown acompanha a cor do texto */
+            #columnButtons .dt-button.btn-soft-primary .dt-down-arrow {
+                border-top-color: currentColor !important;
+            }
+    </style>
+
+}
+
+
+<!-- Body Begin  -->
+<div class="row mb-2">
+    <div class="col-lg-12">
+        <form class="bg-light-subtle rounded border p-2">
+            <!-- // #001 //-->
+            <div class="card-body mb-2"></div>
+
+
+
+            <!-- // #001 //-->
+        </form>
+    </div>
+</div>
+<!-- Body End  -->
+
+<!-- Container Toast de Alerta -->
+@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
+
+<div class="container-fluid">
+
+    @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
+    @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
+
+    <div class="card">
+
+        <div class="card-body pt-0" style="padding-top:-1px;"> </div>
+
+        <div class="card-body">
+    
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- AntiForgery -->
+<form id="__ajaxAntiForgery" class="d-none">
+    @Html.AntiForgeryToken()
+</form>
+
+@section scripts {
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/colresizable@1.6/colResizable-1.6.min.js"></script>
+
+    <script src="~/js/confirm-modal.js" asp-append-version="true" defer></script>
+
+    <script>
+        (function () {
+            const layoutToastEl = document.getElementById('layoutToast');
+        
+            // ✅ GUARDA bootstrap para não quebrar o restante do script se não estiver carregado
+            const layoutToast = (layoutToastEl && window.bootstrap) ? new bootstrap.Toast(layoutToastEl) : null;
+
+            const exportMeta = {
+                user: '@(User?.Identity?.Name ?? "Anônimo")',
+                origem: '@($"{ViewContext.RouteData.Values["area"]}/{ViewContext.RouteData.Values["controller"]}/{ViewContext.RouteData.Values["action"]}")',
+                servertime: '@DateTime.Now.ToString("dd/MM/yyyy HH:mm")'
+            };
+
+            // Busca com botão limpar
+            const searchInput = $('#tableSearch');
+            const clearBtn = $('#clearSearch');
+            searchInput.on('input', function () {
+                clearBtn.toggleClass('show', this.value.length > 0);
+                if (window.dataTable) window.dataTable.search(this.value).draw();
+            });
+            clearBtn.on('click', function () {
+                searchInput.val('').trigger('input'); searchInput.focus();
+            });
+
+            // DataTable
+            const table = $('#tblSistemas').DataTable({
+                responsive: true,
+                colReorder: false,
+                order: [],
+                stateSave: true,
+                stateDuration: -1,
+
+                processing: true, serverSide: false, autoWidth: false, deferRender: true,
+                ajax: {
+                    url: '@Url.Action("GetData", "Tsistema", new { area = "SEG" })',
+                    type: 'GET', cache: false,
+                    data: d => { d._ = Date.now(); },
+                    dataSrc: json => Array.isArray(json) ? json : (json?.data || [])
+                },
+
+                columns: [
+                    {
+                        data: null, orderable: false, searchable: false, className: 'text-center', width: '36px',
+                        render: (_d,_t,row) => `
+                          <div class="form-check m-0">
+                            <input class="form-check-input row-check" type="checkbox" value="${row.cdsistema ?? ''}">
+                          </div>`
+                    },
+                    { data: 'cdsistema', width: '100px' },
+                    { data: 'dcsistema' },
+        {
+            data: 'ativo',
+            width: '90px',
+            className: 'text-center',
+            orderable: false,
+            searchable: false,
+            render: (data, _type, row) => {
+                const id = String(row.cdsistema ?? '').trim();
+                const checked = (data===true || data===1 || data==='1' || data==='S') ? 'checked' : '';
+                return `
+                  <div class="form-check form-switch m-0 d-inline-flex align-items-center">
+                    <input type="checkbox"
+                           class="form-check-input js-switch-ativo"
+                           data-id="${id}" ${checked}
+                           title="${checked ? 'Desativar' : 'Ativar'}">
+                  </div>`;
+            }
+        },
+                    {
+                        data: null, orderable: false, searchable: false, className: 'text-end', width: '120px',
+                        render: (_d,_t,row) => {
+                            const id = row.cdsistema ?? '';
+                            const editBase = '@Url.Action("Edit", "Tsistema", new { area = "SEG" })';
+                            const delBase  = '@Url.Action("Delete", "Tsistema", new { area = "SEG" })';
+                            return `
+                              <div class="btn-group btn-group-sm" role="group">
+                                <a class="btn btn-success" href="${editBase}/${encodeURIComponent(id)}" title="Editar"><i class="fa fa-pen"></i></a>
+                                <a class="btn btn-danger" href="${delBase}/${encodeURIComponent(id)}"  title="Excluir"><i class="fa fa-trash"></i></a>
+                              </div>`;
+                        }
+                    }
+                ],
+
+                /* info à esquerda, paginação à direita */
+                dom: 'rt<"row mt-3 align-items-center"<"col-12 col-md-6 text-start"i><"col-12 col-md-6 text-end"p>>',
+
+                language: {
+                    info: "Mostrando _START_ a _END_ de _TOTAL_",
+                    paginate: { previous: "Anterior", next: "Próximo" },
+                    zeroRecords: "Nada encontrado",
+                    infoEmpty: "Sem registros",
+                    infoFiltered: "(filtrado de _MAX_ no total)"
+                },
+
+                initComplete: function () {
+                    const api = this.api();
+                    window.dataTable = api;
+
+                    // Export (invisível, acionado pelos links do dropdown)
+                    new $.fn.dataTable.Buttons(api, {
+                        buttons: [
+                            { extend: 'excelHtml5', title: 'Sistemas', name: 'excel',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' } },
+                            { extend: 'csvHtml5',   title: 'Sistemas', name: 'csv',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' } },
+                            { extend: 'pdfHtml5',   title: 'Sistemas', name: 'pdf',
+                              orientation: 'landscape', pageSize: 'A4',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' },
+                              customize: function (doc) {
+                                  doc.pageMargins = [40, 60, 40, 40];
+                                  doc.header = () => ({
+                                      margin: [40, 20, 40, 0],
+                                      columns: [
+                                          { text: 'Relatório — Sistemas', alignment: 'left', fontSize: 10, bold: true },
+                                          { text: `Origem: ${exportMeta.origem}`, alignment: 'right', fontSize: 8 }
+                                      ]
+                                  });
+                                  doc.footer = (currentPage, pageCount) => ({
+                                      margin: [40, 0, 40, 0],
+                                      columns: [
+                                          { text: `Gerado por: ${exportMeta.user} • ${exportMeta.servertime}`, alignment: 'left', fontSize: 8 },
+                                          { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', fontSize: 8 }
+                                      ]
+                                  });
+                              } },
+                            { extend: 'print', title: 'Sistemas', name: 'print',
+                              exportOptions: { columns: ':visible:not(:first-child,:last-child)' },
+                              messageTop: () => `Origem: ${exportMeta.origem}`,
+                              messageBottom: () => `Gerado por: ${exportMeta.user} • ${exportMeta.servertime}`,
+                              customize: function (win) {
+                                  const css = `
+                                      @@page { margin: 20mm; }
+                                      table { page-break-inside:auto }
+                                      tr { page-break-inside:avoid; page-break-after:auto }
+                                  `;
+                                  $(win.document.head).append('<style>' + css + '</style>');
+                              } }
+                        ]
+                    });
+
+                    $('#exportExcel').on('click', e => { e.preventDefault(); api.button('excel:name').trigger(); });
+                    $('#exportCsv')  .on('click', e => { e.preventDefault(); api.button('csv:name').trigger();   });
+                    $('#exportPdf')  .on('click', e => { e.preventDefault(); api.button('pdf:name').trigger();   });
+                    $('#exportPrint').on('click', e => { e.preventDefault(); api.button('print:name').trigger(); });
+
+                    // COLUNAS (colvis) com seu estilo
+                    const colvis = new $.fn.dataTable.Buttons(api, {
+                      buttons: [{
+                        extend: 'colvis',
+                        name: 'colvis',
+                        className: 'btn btn-soft-primary btn-icon',
+                        text: '<i data-lucide="list" class="fs-lg"></i>',
+                        titleAttr: 'Visibilidade das colunas',
+                        columns: ':not(:first-child):not(:last-child)',
+                        init: function (_api, node) {
+                          $(node).removeClass('btn-secondary');
+                        }
+                      }]
+                    });
+                    $(colvis.container()).appendTo('#columnButtons');
+
+                    if (window.lucide && typeof lucide.createIcons === 'function') {
+                      lucide.createIcons();
+                    }
+
+                    // Selecionar todos / indeterminado
+                    $('#checkAll').on('change', function () {
+                        $('.row-check', api.rows({ search: 'applied' }).nodes()).prop('checked', this.checked);
+                    });
+                    $(document).on('change', '.row-check', function () {
+                        const total = $('.row-check').length, checked = $('.row-check:checked').length;
+                        $('#checkAll').prop('indeterminate', checked > 0 && checked < total)
+                                      .prop('checked', checked === total);
+                    });
+
+                    // Redimensionar colunas
+                    function enableColResize() {
+                        const $t = $('#tblSistemas');
+                        try { $t.colResizable({ disable: true }); } catch (e) {}
+                        const lastIdx = api.columns().indexes().length - 1;
+                        $t.colResizable({
+                            liveDrag: true, headerOnly: true, minWidth: 60,
+                            resizeMode: 'overflow', draggingClass: 'dragging',
+                            disabledColumns: [0, lastIdx], partialRefresh: true
+                        });
+                    }
+                    enableColResize();
+                    api.on('column-reorder.dt draw.dt responsive-resize.dt', enableColResize);
+                    let t; $(window).on('resize', function(){ clearTimeout(t); t = setTimeout(enableColResize, 150); });
+                }
+            });
+
+        })();
+    </script>
+
+    <script>
+        (function () {
+          const delByTokenUrl = '/SEG/Tsistema/DeleteByToken';
+
+          // token anti-forgery (procura em vários lugares)
+          function anti() {
+            return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value
+                || document.querySelector('#__anti input[name="__RequestVerificationToken"]')?.value
+                || document.querySelector('input[name="__RequestVerificationToken"]')?.value
+                || '';
+          }
+
+          // pega a linha do DataTable para o botão clicado
+          function getRowData(el) {
+            const dt = window.dataTable || ($('#tblSistemas').length ? $('#tblSistemas').DataTable() : null);
+            if (!dt) return null;
+            const $tr = $(el).closest('tr');
+            return dt.row($tr.hasClass('child') ? $tr.prev() : $tr).data() || null;
+          }
+
+          // neutraliza qualquer link legado de delete que escape do handler
+          $(document).on('click', '#tblSistemas a[href*="/Tsistema/Delete/"].disabled', function (e) {
+            e.preventDefault(); e.stopPropagation();
+          });
+
+          // Exclusão (link da lixeira)
+          $(document).on('click', '#tblSistemas a.btn-danger[href*="/Tsistema/Delete/"]', async function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const $btn = $(this);
+            if ($btn.hasClass('disabled')) return; // já em operação
+
+            const href = this.href;
+            const match = href.match(/\/Delete\/([^/?#]+)/i);
+            const id = match ? decodeURIComponent(match[1]) : '';
+
+            const row = getRowData(this);
+            const token = row?.deleteToken || ''; // usa token se existir
+
+            // confirmação
+            try {
+              if (window.confirmModal) {
+                await window.confirmModal({
+                  title: 'Excluir registro',
+                  message: `Confirma excluir o item <strong>${id || ''}</strong>? Esta ação não pode ser desfeita.`,
+                  okText: 'Excluir',
+                  okClass: 'btn-danger'
+                });
+              } else if (!window.confirm(`Excluir ${id}?`)) {
+                return;
+              }
+            } catch { return; }
+
+            // spinner + desabilita o link (âncoras não respeitam disabled => usa .disabled do Bootstrap)
+            const prevHTML = $btn.html();
+            $btn.addClass('disabled').attr('aria-disabled', 'true').css('pointer-events', 'none')
+                .html('<i class="fa fa-spinner fa-spin"></i>');
+
+            try {
+              // monta requisição (preferindo DeleteByToken)
+              const url = token ? delByTokenUrl : href;
+              const opts = { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
+
+              const af = anti();
+              if (af) opts.headers['RequestVerificationToken'] = af;
+
+              if (token) {
+                opts.headers['Content-Type'] = 'application/json; charset=utf-8';
+                opts.body = JSON.stringify({ token });
+              } else {
+                // quando não há token, alguns filtros exigem o token no body
+                opts.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
+                opts.body = new URLSearchParams({ '__RequestVerificationToken': af });
+              }
+
+              const res = await fetch(url, opts);
+
+              if (!res.ok) {
+                let msg = '';
+                try { msg = await res.text(); } catch {}
+                if (res.status === 409) { // FK/dependências
+                  throw new Error(msg || 'Erro ao excluir. Verifique dependências.');
+                }
+                throw new Error(msg || `Falha ao excluir (HTTP ${res.status}).`);
+              }
+
+              // tenta interpretar JSON de sucesso (se o backend enviar)
+              try {
+                const txt = await res.text();
+                if (txt) {
+                  const json = JSON.parse(txt);
+                  if (json && json.success === false) throw new Error(json.message || 'Falha ao excluir.');
+                }
+              } catch { /* resposta não-json, tudo bem */ }
+
+              // ok
+              (window.dataTable || $('#tblSistemas').DataTable()).ajax.reload(null, false);
+              window.showToast?.({ title: 'Sucesso', message: 'Registro excluído com sucesso.', variant: 'success' });
+            } catch (err) {
+              window.showToast?.({ title: 'Erro', message: err?.message || 'Falha ao excluir.', variant: 'danger' });
+            } finally {
+              // SEMPRE restaura o botão (mesmo que o DT recarregue depois)
+              $btn.removeClass('disabled').removeAttr('aria-disabled').css('pointer-events', '')
+                  .html(prevHTML);
+            }
+          });
+        })();
+    </script>
+
+    <script>
+        (function () {
+          if (!window.DT) window.DT = {};
+
+          /**
+           * Exclusão em massa (chame a partir do seu dropdown)
+           * @@param {object} cfg
+           *  - tableId: id da tabela (ex.: 'tblSistemas')
+           *  - deleteBaseUrl: base do endpoint Delete (ex.: '/SEG/Tsistema/Delete')
+           *  - method: 'POST' | 'DELETE' (default 'POST')
+           *  - itemSelector: seletor dos checkboxes de linha (default '.row-check')
+           *  - masterSelector: seletor do checkbox mestre (default '#checkAll')
+           */
+          window.DT.bulkDelete = async function (cfg) {
+            const {
+              tableId,
+              deleteBaseUrl,
+              method = 'POST',
+              itemSelector = '.row-check',
+              masterSelector = '#checkAll'
+            } = cfg || {};
+
+            const api = window.dataTable || (tableId ? $('#' + tableId).DataTable() : null);
+            if (!api) { showToast({ title: 'Aviso', message: 'Tabela não inicializada.', variant: 'info' }); return; }
+
+            // IDs marcados (página atual) + trim
+            const nodes = api.rows({ page: 'current' }).nodes();
+            const ids = $(nodes).find(itemSelector + ':checked')
+              .map((_, el) => String(el.value || '').trim())
+              .get();
+
+            if (!ids.length) { 
+                            showToast({ title: 'Atenção', message: 'Selecione ao menos um registro.', variant: 'warning' }); return;
+
+            }
+
+            // Confirmação
+            try {
+              if (window.confirmModal) {
+                await window.confirmModal({
+                  title: 'Excluir selecionados',
+                  message: `Você está prestes a excluir <b>${ids.length}</b> registro(s). Deseja continuar?`,
+                  okText: 'Excluir',
+                  cancelText: 'Cancelar',
+                  okClass: 'btn-danger'
+                });
+              } else if (!window.confirm(`Excluir ${ids.length} registro(s)?`)) {
+                return;
+              }
+            } catch { return; } // cancelado
+
+            // Cabeçalhos AJAX; AntiForgery vai no BODY
+            const headers = {
+              'X-Requested-With': 'XMLHttpRequest',
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+            };
+            const afToken = (typeof anti === 'function'
+              ? anti()
+              : (document.querySelector('input[name="__RequestVerificationToken"]')?.value || '')
+            );
+
+            let ok = 0, fail = 0, lastError = '';
+
+            // Exclui 1 a 1 (sequencial)
+            for (const id of ids) {
+              const url = `${deleteBaseUrl}/${encodeURIComponent(id)}`;
+              try {
+                // eslint-disable-next-line no-await-in-loop
+                const res = await fetch(url, {
+                  method,
+                  headers,
+                  credentials: 'same-origin',
+                  body: new URLSearchParams({ '__RequestVerificationToken': afToken })
+                });
+
+                if (!res.ok) {
+                  let body = '';
+                  try { body = await res.text(); } catch {}
+                  if (res.status === 429) body = body || 'Muitas operações em sequência. Aguarde alguns segundos e tente novamente.';
+                  fail++;
+                  lastError = `${res.status} ${res.statusText}${body ? ' — ' + body : ''}`;
+                  console.error('[BulkDelete] Falha', { id, url, status: res.status, statusText: res.statusText, body });
+                } else {
+                  ok++;
+                  console.log('[BulkDelete] OK', { id, url });
+                }
+              } catch (err) {
+                fail++;
+                lastError = (err && err.message) || 'Erro desconhecido';
+                console.error('[BulkDelete] Exceção', { id, url, err });
+              }
+            }
+
+            // Limpa o "selecionar todos" e recarrega mantendo estado
+            if (masterSelector) {
+              const master = document.querySelector(masterSelector);
+              if (master) { master.checked = false; master.indeterminate = false; }
+            }
+            api.ajax.reload(null, false);
+
+            // Feedback
+            if (fail === 0) {
+                      showToast({
+          title: 'Sucesso',
+          message: `${ok} registro(s) excluído(s) com sucesso.`,
+          variant: 'success'
+        });
+            } else if (ok === 0) {
+                      showToast({
+          title: 'Erro',
+          message: `Nenhum registro excluído. ${lastError || ''}`.trim(),
+          variant: 'danger'
+        });
+            } else {
+                      showToast({
+          title: 'Parcial',
+          message: `Excluídos: ${ok} • Falharam: ${fail}${lastError ? ` — ${lastError}` : ''}`,
+          variant: 'warning'
+        });
+            }
+          };
+        })();
+    </script>
+
+    <script>
+        (function () {
+          const updateUrl = '@Url.Action("UpdateAtivo", "Tsistema", new { area = "SEG" })';
+
+          function getAfToken() {
+            if (typeof anti === 'function') return anti();
+            const el = document.querySelector('input[name="__RequestVerificationToken"]');
+            return el ? el.value : '';
+          }
+
+          // Debounce + abort por ID
+          const pending = new Map(); // id -> { timer, controller }
+
+          $(document).on('change', '#tblSistemas .js-switch-ativo', function () {
+            const el = this;
+            const id = String(el.dataset.id || '').trim();
+            const desired = el.checked;
+            if (!id) return;
+
+            // Cancela tentativa anterior para o mesmo ID
+            const prev = pending.get(id);
+            if (prev) {
+              if (prev.timer) clearTimeout(prev.timer);
+              if (prev.controller) prev.controller.abort();
+            }
+
+            el.disabled = true;
+
+            const controller = new AbortController();
+            const timer = setTimeout(async () => {
+              try {
+                const res = await fetch(updateUrl, {
+                  method: 'POST',
+                  signal: controller.signal,
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'RequestVerificationToken': getAfToken()
+                  },
+                  body: new URLSearchParams({ id, ativo: desired })
+                });
+
+                // tratamento de HTTP (inclui 429)
+                if (!res.ok) {
+                  if (res.status === 429) {
+                    throw new Error('Muitas alterações em sequência. Tente novamente em instantes.');
+                  }
+                  throw new Error(await res.text());
+                }
+
+                const json = await res.json();
+                if (!json.success) {
+                  throw new Error(json.message || 'Falha ao atualizar.');
+                }
+
+                // ✅ sucesso → toast verde
+                showToast({
+                  title: 'Sucesso',
+                  message: json.message || (desired ? 'Sistema ativado.' : 'Sistema desativado.'),
+                  variant: 'success'
+                });
+              } catch (err) {
+                // Se foi abortado porque o usuário clicou de novo, não mostra erro
+                if (err && err.name === 'AbortError') return;
+
+                // Reverte o switch e mostra erro
+                el.checked = !desired;
+                showToast({
+                  title: 'Erro',
+                  message: (err && err.message) ? err.message : 'Não foi possível atualizar.',
+                  variant: 'danger'
+                });
+              } finally {
+                el.disabled = false;
+                pending.delete(id);
+              }
+            }, 500); // debounce 500ms
+
+            pending.set(id, { timer, controller });
+          });
+        })();
+    </script>
+
+
+    <script>
+        // Toast dinâmico: título, mensagem e cor (success|danger|warning|info)
+        window.showToast = function ({ title = 'Aviso', message = '', variant = 'info', delay = 3500 } = {}) {
+          const toastEl = document.getElementById('layoutToast');
+          if (!toastEl || !window.bootstrap) { alert(message || title); return; }         
+
+          const header = toastEl.querySelector('.toast-header');
+          const titleEl = toastEl.querySelector('.toast-header .me-auto');
+          const bodyEl  = toastEl.querySelector('.toast-body');
+
+          // Conteúdo
+          if (titleEl)  titleEl.textContent = title;
+          if (bodyEl)   bodyEl.textContent = message;
+
+          // Reset de classes e aplica cor no header
+          header.classList.remove('bg-success','bg-danger','bg-warning','bg-info','text-white');
+          const map = { success:'bg-success', danger:'bg-danger', warning:'bg-warning', info:'bg-info' };
+          if (map[variant]) header.classList.add(map[variant], 'text-white');
+
+          bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: true, delay }).show();
+        };
+    </script>
+       
+
+    <script src="~/js/DataHora.js" asp-append-version="true"></script>
+
+}
+

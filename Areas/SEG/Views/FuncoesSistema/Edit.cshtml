@@ -1,0 +1,59 @@
+@model RhSensoWeb.Models.Fucn1
+@{
+    ViewBag.Title = "Editar Função de Sistema";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+<div class="container-fluid">
+    <h4 class="mb-3">@ViewBag.Title</h4>
+
+    <form asp-action="Edit" method="post" class="card">
+        @Html.AntiForgeryToken()
+        @* As chaves vão na rota, mas mantenho escondido por segurança *@
+        <input type="hidden" asp-for="CdSistema" />
+        <input type="hidden" asp-for="CdFuncao" />
+        <div class="card-body">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Sistema</label>
+                    <!-- select somente para exibir; desabilitado -->
+                    <select class="form-select" asp-items="ViewBag.Sistemas" disabled></select>
+                    <div class="form-text">A chave não pode ser alterada.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Código da Função</label>
+                    <input class="form-control" value="@Model.CdFuncao" readonly />
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="DcFuncao" class="form-label">Descrição da Função</label>
+                    <input asp-for="DcFuncao" class="form-control" maxlength="80" />
+                    <span asp-validation-for="DcFuncao" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DcModulo" class="form-label">Módulo</label>
+                    <input asp-for="DcModulo" class="form-control" maxlength="100" />
+                    <span asp-validation-for="DcModulo" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DescricaoModulo" class="form-label">Descrição do Módulo</label>
+                    <input asp-for="DescricaoModulo" class="form-control" maxlength="100" />
+                    <span asp-validation-for="DescricaoModulo" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-footer d-flex gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary">Voltar</a>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+    </form>
+</div>
+
+@section scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

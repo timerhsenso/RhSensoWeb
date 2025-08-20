@@ -1,0 +1,12 @@
+ALTER TABLE dbo.TSISTEMA
+ADD Ativo bit NOT NULL
+    CONSTRAINT DF_TSISTEMA_Ativo DEFAULT (1)
+    WITH VALUES;  -- preenche linhas existentes com 1
+
+
+
+
+UPDATE fucn1
+SET dcmodulo = LOWER(LTRIM(RTRIM(cdfuncao)))
+WHERE dcmodulo IS NULL
+and  cdsistema = 'SEG'

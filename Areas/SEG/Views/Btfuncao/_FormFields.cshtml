@@ -1,0 +1,116 @@
+﻿@model RhSensoWeb.Models.Btfuncao
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var isEdit = (bool)(ViewData["IsEdit"] ?? false);
+    var sistemas = ViewData["Sistemas"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var funcoes = ViewData["Funcoes"] as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var acoes = ViewData["Acoes"] as IEnumerable<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label class="form-label">Sistema</label>
+        @if (!isEdit)
+        {
+            <select asp-for="Cdsistema" asp-items="sistemas" class="form-select" id="selSistema">
+                <option value="">Selecione...</option>
+            </select>
+        }
+        else
+        {
+            <input class="form-control" value="@Model.Cdsistema" readonly />
+        }
+        <span asp-validation-for="Cdsistema" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">Função</label>
+        @if (!isEdit)
+        {
+            <select asp-for="Cdfuncao" asp-items="funcoes" class="form-select" id="selFuncao">
+                <option value="">Selecione...</option>
+            </select>
+        }
+        else
+        {
+            <input class="form-control" value="@Model.Cdfuncao" readonly />
+        }
+        <span asp-validation-for="Cdfuncao" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-4">
+        <label asp-for="Nmbotao" class="form-label"></label>
+        <input asp-for="Nmbotao" class="form-control" readonly="@isEdit" />
+        <span asp-validation-for="Nmbotao" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label asp-for="Dcbotao" class="form-label"></label>
+        <input asp-for="Dcbotao" class="form-control" />
+        <span asp-validation-for="Dcbotao" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">Ação</label>
+        <select asp-for="Cdacao" asp-items="acoes" class="form-select">
+            <option value="">Selecione...</option>
+        </select>
+        <span asp-validation-for="Cdacao" class="text-danger"></span>
+    </div>
+</div>
+
+<script>
+    (function(){
+      const sistema = document.getElementById('selSistema');
+      const funcao  = document.getElementById('selFuncao');
+
+      // helper: uppercase on input
+      const up = id => { const el=document.getElementById(id); if(!el) return; el.addEventListener('input', e => e.target.value=(e.target.value||'').toUpperCase()); };
+      up('Cdsistema'); up('Cdfuncao'); up('Nmbotao'); up('Cdacao');
+
+      async function carregarFuncoes(cdsistema, manter){
+        if (!funcao) return;
+        funcao.innerHTML = '<option value="">Selecione...</option>';
+        funcao.disabled = true;
+
+        try {
+          if (!cdsistema) { funcao.disabled = false; return; }
+
+          const url = '@Url.Action("GetFuncoesBySistema", "Btfuncao", new { area = "SEG" })' + '?cdsistema=' + encodeURIComponent(cdsistema);
+          const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' }});
+          const list = await res.json();
+
+          // debug rápido — pode comentar depois
+          // console.log('funcoes:', list);
+
+          for (const it of list || []) {
+            const val = it.value ?? it.Value ?? ''; // fallback
+            const txt = it.text  ?? it.Text  ?? val;
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = txt || val;
+            opt.title = opt.textContent;
+            if (manter && String(manter).toUpperCase() === String(val).toUpperCase()) opt.selected = true;
+            funcao.appendChild(opt);
+          }
+        } catch (err) {
+          // console.error(err);
+        } finally {
+          funcao.disabled = false;
+        }
+      }
+
+      sistema?.addEventListener('change', e => {
+        const sis = (e.target.value || '').toUpperCase();
+        carregarFuncoes(sis, '');
+      });
+
+      // Edição: se já vier sistema, carrega e mantém a função
+      document.addEventListener('DOMContentLoaded', function(){
+        const sis = sistema?.value || '@(Model?.Cdsistema ?? "")';
+        const fun = '@(Model?.Cdfuncao ?? "")';
+        if (sis && funcao) carregarFuncoes(sis, fun);
+      });
+    })();
+</script>
+

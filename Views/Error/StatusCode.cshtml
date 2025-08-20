@@ -1,0 +1,65 @@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var code = ViewData["StatusCode"] as int? ?? 0;
+    string title = "Ocorreu um erro";
+    string subtitle = "Houve um problema ao processar sua solicitação.";
+    string icon = "fas fa-exclamation-triangle";
+    string cardClass = "card-outline card-secondary";
+
+    switch (code)
+    {
+        case 400: title = "Requisição inválida (400)"; icon = "fas fa-exclamation-circle"; cardClass = "card-outline card-warning"; break;
+        case 401: title = "Não autenticado (401)"; icon = "fas fa-lock"; cardClass = "card-outline card-info"; break;
+        case 403: title = "Acesso negado (403)"; icon = "fas fa-ban"; cardClass = "card-outline card-danger"; break;
+        case 404: title = "Página não encontrada (404)"; icon = "fas fa-search"; cardClass = "card-outline card-warning"; break;
+        case 408: title = "Tempo esgotado (408)"; icon = "fas fa-hourglass-end"; cardClass = "card-outline card-warning"; break;
+        case 409: title = "Conflito (409)"; icon = "fas fa-compress-arrows-alt"; cardClass = "card-outline card-warning"; break;
+        case 415: title = "Mídia não suportada (415)"; icon = "fas fa-file-excel"; cardClass = "card-outline card-warning"; break;
+        case 429: title = "Muitas requisições (429)"; icon = "fas fa-tachometer-alt"; cardClass = "card-outline card-warning"; break;
+        case 500: title = "Erro interno (500)"; icon = "fas fa-bug"; cardClass = "card-outline card-danger"; break;
+        case 502: title = "Gateway inválido (502)"; icon = "fas fa-network-wired"; cardClass = "card-outline card-warning"; break;
+        case 503: title = "Serviço indisponível (503)"; icon = "fas fa-tools"; cardClass = "card-outline card-warning"; break;
+        case 504: title = "Gateway timeout (504)"; icon = "fas fa-stopwatch"; cardClass = "card-outline card-warning"; break;
+    }
+    ViewData["Title"] = title;
+}
+
+<div class="content-wrapper p-3">
+    <section class="content-header">
+        <div class="container-fluid">
+            <div class="row mb-2">
+                <div class="col-12">
+                    <h1 class="mb-0">
+                        <i class="@icon me-2" aria-hidden="true"></i> @title
+                    </h1>
+                    <p class="text-muted mb-0">@subtitle</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12 col-lg-10 col-xl-8">
+                    <div class="card @cardClass shadow-sm">
+                        <div class="card-header">
+                            <h3 class="card-title mb-0">Código: @code</h3>
+                        </div>
+                        <div class="card-body" role="alert">
+                            <p>Se isso for inesperado, tente novamente ou volte para a página inicial.</p>
+                        </div>
+                        <div class="card-footer d-flex flex-wrap gap-2">
+                            <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                                <i class="fas fa-home" aria-hidden="true"></i> Início
+                            </a>
+                            <button type="button" class="btn btn-outline-secondary" onclick="history.back()" aria-label="Voltar">
+                                <i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

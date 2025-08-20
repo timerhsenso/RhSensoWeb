@@ -1,0 +1,37 @@
+@model RhSensoWeb.Models.Tuse1
+
+@{
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Usuario";
+    ViewBag.Controller = "Usuario";
+    ViewBag.HabilitaBtnNovo = false;
+    ViewBag.HabilitaBtnExportar = false;
+
+    ViewBag.Title = "Editar Usuário";
+    ViewBag.SubTitle = "Segurança";
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+<div class="container-fluid">
+    <div class="card mt-3">
+        <div class="card-header"><h5 class="mb-0">Editar Usuário</h5></div>
+        <div class="card-body">
+            <form asp-area="SEG" asp-controller="Usuario" asp-action="Edit" asp-route-id="@Model.Cdusuario" method="post">
+                @Html.AntiForgeryToken()
+
+                @Html.HiddenFor(m => m.Cdusuario) @* Garante que a PK chega no POST *@
+
+                @Html.Partial("_FormFields", Model)
+
+                <div class="mt-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <a asp-area="SEG" asp-controller="Usuario" asp-action="Index" class="btn btn-secondary">Voltar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

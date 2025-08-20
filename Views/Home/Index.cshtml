@@ -1,0 +1,115 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+    var sessionKeys = Context.Session.Keys.ToList();
+    var cookies = Context.Request.Cookies.ToList();
+}
+
+<div class="container mt-5">
+    <h1 class="mb-4">Bem-vindo!</h1>
+
+    <hr />
+    <h2>Session (Sessão)</h2>
+    @if (sessionKeys.Count > 0)
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Chave</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var key in sessionKeys)
+                {
+                    <tr>
+                        <td>@key</td>
+                        <td>
+                            @{
+                                var value = Context.Session.GetString(key);
+                                if (!string.IsNullOrEmpty(value) && value.Length > 250)
+                                {
+                                    <span>@value.Substring(0, 250)... (truncado)</span>
+                                }
+                                else
+                                {
+                                    <span>@value</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhuma sessão registrada.</em></p>
+    }
+
+    <hr />
+    <h2>Cookies</h2>
+    @if (cookies.Count > 0)
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cookie in cookies)
+                {
+                    <tr>
+                        <td>@cookie.Key</td>
+                        <td>
+                            @{
+                                var value = cookie.Value;
+                                if (!string.IsNullOrEmpty(value) && value.Length > 250)
+                                {
+                                    <span>@value.Substring(0, 250)... (truncado)</span>
+                                }
+                                else
+                                {
+                                    <span>@value</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhum cookie registrado.</em></p>
+    }
+
+    <hr />
+    <h2>Claims do Usuário</h2>
+    @if (User.Identity.IsAuthenticated && User.Claims.Any())
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var claim in User.Claims)
+                {
+                    <tr>
+                        <td>@claim.Type</td>
+                        <td>@claim.Value</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhuma claim registrada.</em></p>
+    }
+
+</div>

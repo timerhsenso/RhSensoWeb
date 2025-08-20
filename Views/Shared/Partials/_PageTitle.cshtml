@@ -1,0 +1,26 @@
+﻿@{
+    var title = ViewBag.Title as string ?? "";
+    var subtitle = ViewBag.SubTitle as string ?? "";
+    var icon = ViewBag.Icon as string ?? "monitor-smartphone"; // ícone padrão
+}
+
+
+
+<div class="page-title-head d-flex align-items-center">
+    <div class="flex-grow-1">
+        <h4 class="fs-sm text-uppercase fw-bold m-0"><i data-lucide="@icon" class="me-2"></i>@title</h4>
+    </div>
+
+    <div class="text-end">
+        <ol class="breadcrumb m-0 py-0">
+            <li class="breadcrumb-item"></li>
+            @if (!string.IsNullOrEmpty(subtitle))
+            {
+                <li class="breadcrumb-item active">
+                    <i data-lucide="clock" class="me-1"></i>
+                    <span id="meuRelogio"></span>            
+                 </li>
+            }
+        </ol>
+    </div>
+</div>
