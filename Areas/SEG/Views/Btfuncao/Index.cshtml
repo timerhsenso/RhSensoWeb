@@ -9,11 +9,17 @@
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
+
 @section styles {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/datatables.min.css" />
+    <!-- DataTables + Responsive + ColReorder -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
     <style>
-        #tblBtfuncao thead th {
+        [data-page="seg-btfuncao-index"] nav[aria-label="breadcrumb"] {
+            --ins-breadcrumb-divider: "";
+        }
+
+        #tblBtfuncao[role="table"] thead th {
             font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
             font-size: 12px;
             font-weight: 600;
@@ -48,184 +54,222 @@
         .dataTables_paginate .pagination {
             justify-content: flex-end !important;
         }
+
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        .btn-action {
+            padding: .25rem .5rem;
+        }
+
+        th.no-reorder, td.no-reorder {
+            cursor: default;
+        }
     </style>
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
-
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
-
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
 
-<!-- Body Begin  -->
-<div class="row mb-2">
-    <div class="col-lg-12">
-        <form class="bg-light-subtle rounded border p-2">
-            <!-- // #001 //-->
-            <div class="card-body mb-2"></div>
+<main data-page="seg-btfuncao-index" class="container-fluid">
+    <div class="row mb-2">
+        <div class="col-lg-12">
+            <form class="bg-light-subtle rounded border p-2" role="search" aria-label="Busca e grade de botões por função">
+                <div class="card-body mb-2"></div>
 
-            <table id="tblBtfuncao" class="table table-striped table-bordered w-100">
-                <thead>
-                    <tr>
-                        <th class="dt-check">
-                            <div class="form-check m-0">
-                                <input class="form-check-input" type="checkbox" id="checkAll" title="Selecionar todos" />
-                            </div>
-                        </th>
-                        <th>Sistema</th>
-                        <th>Função</th>
-                        <th>Botão</th>
-                        <th>Descrição</th>
-                        <th>Ação</th>
-                        <th class="dt-actions">Ações</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+                <table id="tblBtfuncao" class="table table-striped table-bordered w-100" role="table" aria-describedby="tbl-help">
+                    <caption id="tbl-help" class="visually-hidden">Tabela de botões por função com busca, seleção e ações.</caption>
+                    <thead>
+                        <tr>
+                            <th class="dt-check no-reorder">
+                                <div class="form-check m-0">
+                                    <input class="form-check-input" type="checkbox" id="checkAll" title="Selecionar todos" aria-label="Selecionar todos" />
+                                </div>
+                            </th>
+                            <th>Sistema</th>
+                            <th>Função</th>
+                            <th>Botão</th>
+                            <th>Descrição</th>
+                            <th>Ação</th>
+                            <th class="dt-actions no-reorder">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
 
-
-            <!-- // #001 //-->
-        </form>
+                <div class="mt-2 d-flex gap-2">
+                    <button id="btnExcluirSelecionados" type="button" class="btn btn-outline-danger">
+                        <i class="fa fa-trash me-1"></i> Excluir Selecionados
+                    </button>
+                    <a asp-area="SEG" asp-controller="Btfuncao" asp-action="Create" class="btn btn-primary">
+                        <i class="fa fa-plus me-1"></i> Novo
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
-<!-- Body End  -->
+</main>
 
 <form id="__ajaxAntiForgery" class="d-none">@Html.AntiForgeryToken()</form>
 
 @section scripts {
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/datatables.min.js"></script>
+    <!-- DataTables + Responsive + ColReorder -->
+    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
     <script>
         (function(){
-          const $tbl = $('#tblBtfuncao');
-          const dt = $tbl.DataTable({
-            processing:true, serverSide:false, responsive:true, stateSave:true, autoWidth:false,
-            dom: 'rt<"row mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-            ajax:{
-              url:'@Url.Action("GetData", "Btfuncao", new { area = "SEG" })',
-              type:'GET', cache:false,
-              dataSrc: function(json){
-                if(json && json.error){
-                  window.showToast?.({ title:'Erro', message: json.error, variant:'danger' });
-                  return [];
-                }
-                return Array.isArray(json) ? json : (json.data || []);
-              }
-            },
-            columns:[
-              { // checkbox
-                data:null, orderable:false, searchable:false, className:'dt-check',
-                render:function(data,type,row){
-                  const s=(row?.cdsistema||'').trim(), f=(row?.cdfuncao||'').trim(), b=(row?.nmbotao||'').trim();
-                  return `<div class="form-check m-0">
-                            <input class="form-check-input row-check" type="checkbox" value="${s}|${f}|${b}">
-                          </div>`;
-                }
-              },
-              { data:'cdsistema' },
-              { data:'cdfuncao' },
-              { data:'nmbotao'  },
-              { data:'dcbotao'  },
-              { data:'cdacao'   },
-              { // ações
-                data:null, orderable:false, searchable:false, className:'dt-actions',
-                render:function(data,type,row){
-                  const s=encodeURIComponent((row?.cdsistema||'').trim());
-                  const f=encodeURIComponent((row?.cdfuncao ||'').trim());
-                  const b=encodeURIComponent((row?.nmbotao  ||'').trim());
-                  const token=row?.deleteToken||'';
-                  const editHref='@Url.Action("Edit", "Btfuncao", new { area = "SEG" })' + `?cdsistema=${s}&cdfuncao=${f}&nmbotao=${b}`;
-                  return `
-                    <div class="btn-group btn-group-sm" role="group">
-                      <a class="btn btn-success" href="${editHref}" title="Editar"><i class="fa fa-pen"></i></a>
-                      <button class="btn btn-danger js-del-one" data-token="${token}" data-s="${s}" data-f="${f}" data-b="${b}" title="Excluir">
-                        <i class="fa fa-trash"></i>
-                      </button>
-                    </div>`;
-                }
-              }
-            ],
-            order:[[1,'asc'],[2,'asc'],[3,'asc']],
-            language:{ url:'//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' }
-          });
+            const $tbl = $('#tblBtfuncao');
 
-          window.dataTable = dt;
+            const dt = $tbl.DataTable({
+                processing: true,
+                serverSide: false,
+                responsive: true,
+                stateSave: true,
+                autoWidth: false,
+                dom: 'rt<"row mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                ajax: {
+                    url: '@Url.Action("GetData", "Btfuncao", new { area = "SEG" })',
+                    type: 'GET',
+                    cache: false,
+                    dataSrc: function(json){
+                        if(json && json.error){
+                            window.showToast?.({ title:'Erro', message: json.error, variant:'danger' });
+                            return [];
+                        }
+                        return Array.isArray(json) ? json : (json.data || []);
+                    }
+                },
+                columns: [
+                    { // checkbox (travada para reorder)
+                        data: null, orderable:false, searchable:false, className:'dt-check no-reorder',
+                        render: function(data,type,row){
+                            const s=(row?.cdsistema||'').trim(), f=(row?.cdfuncao||'').trim(), b=(row?.nmbotao||'').trim();
+                            return `<div class="form-check m-0">
+                                        <input class="form-check-input row-check" type="checkbox" value="${s}|${f}|${b}" aria-label="Selecionar linha">
+                                    </div>`;
+                        }
+                    },
+                    { data:'cdsistema' },
+                    { data:'cdfuncao' },
+                    { data:'nmbotao'  },
+                    { data:'dcbotao'  },
+                    { data:'cdacao'   },
+                    { // ações (travada para reorder)
+                        data: null, orderable:false, searchable:false, className:'dt-actions no-reorder',
+                        render: function(data,type,row){
+                            const s=encodeURIComponent((row?.cdsistema||'').trim());
+                            const f=encodeURIComponent((row?.cdfuncao ||'').trim());
+                            const b=encodeURIComponent((row?.nmbotao  ||'').trim());
+                            const token=row?.deleteToken||'';
+                            const editHref='@Url.Action("Edit", "Btfuncao", new { area = "SEG" })' + `?cdsistema=${s}&cdfuncao=${f}&nmbotao=${b}`;
 
-          // Busca externa (TopBar)
-          const $search = $('#tableSearch'), $clear = $('#clearSearch');
-          $search.on('input', function(){
-            $clear.toggleClass('show', this.value.length>0);
-            dt.search(this.value).draw();
-          });
-          $clear.on('click', function(){ $search.val('').trigger('input').focus(); });
+                            return `
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Ações da linha">
+                                <a class="btn btn-success btn-action" href="${editHref}" aria-label="Editar">
+                                    <i class="fa fa-pen"></i><span class="visually-hidden"> Editar</span>
+                                </a>
+                                <button type="button" class="btn btn-danger btn-action js-del-one"
+                                        data-token="${token}" data-s="${s}" data-f="${f}" data-b="${b}"
+                                        aria-label="Excluir">
+                                    <i class="fa fa-trash"></i><span class="visually-hidden"> Excluir</span>
+                                </button>
+                            </div>`;
+                        }
+                    }
+                ],
+                order: [[1,'asc'],[2,'asc'],[3,'asc']],
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
+                colReorder: { fixedColumnsLeft: 1, fixedColumnsRight: 1 },
+                columnDefs: [ { targets: [0, 6], className: 'no-reorder' } ]
+            });
 
-          // "Selecionar todos"
-          $('#checkAll').on('change', function(){
-            const checked = this.checked;
-            $('.row-check', dt.rows({page:'current'}).nodes()).prop('checked', checked);
-          });
-          dt.on('draw', function(){ $('#checkAll').prop('checked', false); });
+            window.dataTable = dt;
 
-          function anti(){
-            return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value || '';
-          }
+            // Busca externa (TopBar)
+            const $search = $('#tableSearch'), $clear = $('#clearSearch');
+            $search.on('input', function(){
+                $clear.toggleClass('show', this.value.length>0);
+                dt.search(this.value).draw();
+            });
+            $clear.on('click', function(){ $search.val('').trigger('input').focus(); });
 
-          // Excluir 1
-          $(document).on('click', '.js-del-one', async function(e){
-            e.preventDefault();
-            const token = this.dataset.token || '';
-            const s = this.dataset.s || '', f = this.dataset.f || '', b = this.dataset.b || '';
-            if(!confirm('Confirma excluir este registro?')) return;
+            // Selecionar todos
+            $('#checkAll').on('change', function(){
+                const checked = this.checked;
+                $('.row-check', dt.rows({page:'current'}).nodes()).prop('checked', checked);
+            });
+            dt.on('draw', function(){ $('#checkAll').prop('checked', false); });
 
-            const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti() };
-            let url, opts;
-
-            if(token){
-              url = '@Url.Action("DeleteByToken", "Btfuncao", new { area = "SEG" })';
-              opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/json; charset=utf-8' }, body: JSON.stringify({ token }) };
-            }else{
-              url = '@Url.Action("Delete", "Btfuncao", new { area = "SEG" })';
-              const body = new URLSearchParams({ cdsistema: s, cdfuncao: f, nmbotao:b });
-              opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' }, body };
+            function anti(){
+                return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value || '';
             }
 
-            try{
-              const res = await fetch(url, opts);
-              const json = await res.json().catch(()=> ({}));
-              if(!res.ok || json?.success === false) throw new Error(json?.message || `Falha ao excluir (HTTP ${res.status})`);
-              window.showToast?.({ title:'Sucesso', message:'Registro excluído com sucesso.', variant:'success' });
-              dt.ajax.reload(null,false);
-            }catch(err){
-              window.showToast?.({ title:'Erro', message: err?.message || 'Erro ao excluir.', variant:'danger' });
-            }
-          });
+            // Excluir 1
+            $(document).on('click', '.js-del-one', async function(e){
+                e.preventDefault();
+                const token = this.dataset.token || '';
+                const s = this.dataset.s || '', f = this.dataset.f || '', b = this.dataset.b || '';
+                if(!confirm('Confirma excluir este registro?')) return;
 
-          // Excluir em massa
-          $('#btnExcluirSelecionados').on('click', async function(e){
-            e.preventDefault();
-            const ids = $('.row-check:checked', dt.rows({page:'current'}).nodes()).map((_,el)=>String(el.value||'')).get();
-            if(!ids.length){ window.showToast?.({ title:'Atenção', message:'Selecione ao menos um registro.', variant:'warning' }); return; }
-            if(!confirm(`Excluir ${ids.length} registro(s)?`)) return;
+                const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti() };
+                let url, opts;
 
-            const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti(), 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' };
-            let ok=0, fail=0, lastErr='';
-            for(const id of ids){
-              const [s,f,b] = id.split('|');
-              try{
-                const body = new URLSearchParams({ cdsistema:s, cdfuncao:f, nmbotao:b });
-                const res = await fetch('@Url.Action("Delete", "Btfuncao", new { area = "SEG" })', { method:'POST', headers, body });
-                if(!res.ok){ lastErr = await res.text().catch(()=> ''); fail++; } else ok++;
-              }catch(ex){ fail++; lastErr = ex?.message || 'Erro'; }
-            }
-            dt.ajax.reload(null,false);
-            if(fail===0) window.showToast?.({title:'Sucesso', message:`${ok} registro(s) excluído(s).`, variant:'success'});
-            else if(ok===0) window.showToast?.({title:'Erro', message:`Nenhum excluído. ${lastErr}`, variant:'danger'});
-            else window.showToast?.({title:'Parcial', message:`Excluídos: ${ok} • Falhas: ${fail}`, variant:'warning'});
-          });
+                if(token){
+                    url = '@Url.Action("DeleteByToken", "Btfuncao", new { area = "SEG" })';
+                    opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/json; charset=utf-8' }, body: JSON.stringify({ token }) };
+                }else{
+                    url = '@Url.Action("Delete", "Btfuncao", new { area = "SEG" })';
+                    const body = new URLSearchParams({ cdsistema: s, cdfuncao: f, nmbotao:b });
+                    opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' }, body };
+                }
+
+                try{
+                    const res = await fetch(url, opts);
+                    const json = await res.json().catch(()=> ({}));
+                    if(!res.ok || json?.success === false) throw new Error(json?.message || `Falha ao excluir (HTTP ${res.status})`);
+                    window.showToast?.({ title:'Sucesso', message:'Registro excluído com sucesso.', variant:'success' });
+                    dt.ajax.reload(null,false);
+                }catch(err){
+                    window.showToast?.({ title:'Erro', message: err?.message || 'Erro ao excluir.', variant:'danger' });
+                }
+            });
+
+            // Excluir em massa
+            $('#btnExcluirSelecionados').on('click', async function(e){
+                e.preventDefault();
+                const ids = $('.row-check:checked', dt.rows({page:'current'}).nodes()).map((_,el)=>String(el.value||'')).get();
+                if(!ids.length){ window.showToast?.({ title:'Atenção', message:'Selecione ao menos um registro.', variant:'warning' }); return; }
+                if(!confirm(`Excluir ${ids.length} registro(s)?`)) return;
+
+                const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti(), 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' };
+                let ok=0, fail=0, lastErr='';
+                for(const id of ids){
+                    const [s,f,b] = id.split('|');
+                    try{
+                        const body = new URLSearchParams({ cdsistema:s, cdfuncao:f, nmbotao:b });
+                        const res = await fetch('@Url.Action("Delete", "Btfuncao", new { area = "SEG" })', { method:'POST', headers, body });
+                        if(!res.ok){ lastErr = await res.text().catch(()=> ''); fail++; } else ok++;
+                    }catch(ex){ fail++; lastErr = ex?.message || 'Erro'; }
+                }
+                dt.ajax.reload(null,false);
+                if(fail===0) window.showToast?.({title:'Sucesso', message:`${ok} registro(s) excluído(s).`, variant:'success'});
+                else if(ok===0) window.showToast?.({title:'Erro', message:`Nenhum excluído. ${lastErr}`, variant:'danger'});
+                else window.showToast?.({title:'Parcial', message:`Excluídos: ${ok} • Falhas: ${fail}`, variant:'warning'});
+            });
         })();
     </script>
 }

@@ -127,25 +127,22 @@
 
         /* Responsividade - MUDANÇA: só quebra em telas muito pequenas */
         @@media (max-width: 768px) {
-            .toolbar-container
+            .toolbar-container {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
 
-        {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 8px;
-        }
+            .search-fixed {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
 
-        .search-fixed {
-            width: 100%;
-            margin-right: 0;
-            margin-bottom: 8px;
-        }
-
-        .toolbar-right {
-            justify-content: flex-start;
-            flex-wrap: wrap;
-        }
-
+            .toolbar-right {
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
         }
 
         /* Ajustes para DataTable */
@@ -348,14 +345,25 @@
                         <input type="text" class="form-control" value="@cdUsuario" readonly />
                         <input type="hidden" name="CdUsuario" id="CdUsuario" value="@cdUsuario" />
                     </div>
+
+                    <!-- ALTERADO: inputs -> selects -->
                     <div class="mb-3">
                         <label class="form-label">Sistema <span class="text-danger">*</span></label>
-                        <input name="CdSistema" id="CdSistema" class="form-control" maxlength="20" required />
+                        <select name="CdSistema" id="CdSistema" class="form-select" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                        <div class="invalid-feedback">Selecione um sistema.</div>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Grupo <span class="text-danger">*</span></label>
-                        <input name="CdGrUser" id="CdGrUser" class="form-control" maxlength="20" required />
+                        <select name="CdGrUser" id="CdGrUser" class="form-select" required disabled>
+                            <option value="">Selecione um sistema primeiro...</option>
+                        </select>
+                        <div class="invalid-feedback">Selecione um grupo.</div>
                     </div>
+                    <!-- FIM ALTERAÇÃO -->
+
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Início</label>
@@ -390,7 +398,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 
     <script>
-        // Helpers comuns
+        /* ======================
+           CONFIG DE ENDPOINTS
+        =======================*/
+        const UG_URL_GET_SISTEMAS = '/SEG/UsuarioGrupo/GetSistemas'; // ajuste se necessário
+        const UG_URL_GET_GRUPOS   = '/SEG/UsuarioGrupo/GetGruposBySistema'; // ?cdsistema=...
+
+        /* ======================
+           HELPERS COMUNS
+        =======================*/
         function anti() {
             return document.querySelector('#__anti input[name="__RequestVerificationToken"]')?.value || '';
         }
@@ -399,6 +415,44 @@
             if (!d) return '';
             const dt = new Date(d);
             return isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('pt-BR');
+        }
+
+        // NOVO: Utils para selects
+        function popularSelect($select, items, placeholder) {
+            let opts = `<option value="">${placeholder || 'Selecione...'}</option>`;
+            for (const it of items || []) {
+                opts += `<option value="${it.id}">${it.text}</option>`;
+            }
+            $select.html(opts);
+        }
+
+        function carregarSistemas($selectSistema) {
+            return $.getJSON(UG_URL_GET_SISTEMAS)
+                .then(sistemas => {
+                    popularSelect($selectSistema, sistemas, 'Selecione...');
+                })
+                .catch(() => {
+                    popularSelect($selectSistema, [], 'Erro ao carregar sistemas');
+                });
+        }
+
+        function carregarGruposPorSistema(cdsistema, $selectGrupo) {
+            if (!cdsistema) {
+                $selectGrupo.prop('disabled', true).html('<option value="">Selecione um sistema primeiro...</option>');
+                return Promise.resolve();
+            }
+            return $.getJSON(UG_URL_GET_GRUPOS, { cdsistema })
+                .then(grupos => {
+                    if (grupos && grupos.length) {
+                        popularSelect($selectGrupo, grupos, 'Selecione...');
+                        $selectGrupo.prop('disabled', false);
+                    } else {
+                        $selectGrupo.prop('disabled', true).html('<option value="">Nenhum grupo encontrado para o sistema.</option>');
+                    }
+                })
+                .catch(() => {
+                    $selectGrupo.prop('disabled', true).html('<option value="">Erro ao carregar grupos.</option>');
+                });
         }
 
         // NOVO: Array para armazenar seleções
@@ -421,26 +475,15 @@
             const id = `${cdSistema}_${cdFuncao}`;
 
             if (isChecked) {
-                // Adiciona se não existir
                 if (!selecionados.find(s => s.id === id)) {
-                    selecionados.push({
-                        id: id,
-                        cdSistema: cdSistema,
-                        cdFuncao: cdFuncao
-                    });
+                    selecionados.push({ id, cdSistema, cdFuncao });
                 }
             } else {
-                // Remove se existir
                 selecionados = selecionados.filter(s => s.id !== id);
             }
 
-            // Atualiza campo oculto
             $('#hidSelecionados').val(JSON.stringify(selecionados));
-
-            // Atualiza botão
             atualizarBotaoEnviar();
-
-            console.log('Selecionados:', selecionados);
         }
 
         // DataTable
@@ -460,12 +503,10 @@
                 processing: true,
                 serverSide: false,
                 responsive: true,
-                autoWidth: false, // respeita as larguras definidas
+                autoWidth: false,
 
-                // cria botões (ficarão ocultos via CSS, usados pelo dropdown custom)
                 layout: { topStart: { buttons: ['excel', 'csv', 'pdf', 'print'] } },
 
-                // Remove l (length) e f (filter) do layout
                 dom: '<"row"<"col-sm-12"tr>>'
                    + '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
 
@@ -483,32 +524,30 @@
                     }
                 },
 
-                // MUDANÇA: Definindo larguras específicas para as colunas
                 columns: [
-                    {   // 0) Checkbox - MUDANÇA: ID composto por cdsistema_cdfuncao
+                    {   // 0) Checkbox
                         data: null, orderable: false, searchable: false, className: 'dt-check',
-                        width: '50px', // NOVO: largura fixa
+                        width: '50px',
                         defaultContent: '',
                         render: function (data, type, row) {
                             const checkboxId = `chk_${row.Sistema}_${row.Grupo}`;
                             return `<input type="checkbox" class="form-check-input row-checkbox" id="${checkboxId}" data-sistema="${row.Sistema}" data-funcao="${row.Grupo}" />`;
                         }
                     },
-                    { data: 'Sistema', title: 'Sistema', width: '80px' }, // NOVO: largura reduzida
-                    { data: 'Grupo', title: 'Grupo', width: '120px' }, // NOVO: largura reduzida
-                    { data: 'DescricaoGrupo', title: 'Descrição do Grupo', width: 'auto' }, // NOVO: auto para ocupar espaço restante
-
+                    { data: 'Sistema', title: 'Sistema', width: '80px' },
+                    { data: 'Grupo', title: 'Grupo', width: '120px' },
+                    { data: 'DescricaoGrupo', title: 'Descrição do Grupo', width: 'auto' },
                     {
-                        data: 'Inicio', title: 'Início', width: '100px', // NOVO: largura reduzida
+                        data: 'Inicio', title: 'Início', width: '100px',
                         render: function (data) { return fmtDate(data); }
                     },
                     {
-                        data: 'Fim', title: 'Fim', width: '100px', // NOVO: largura reduzida
+                        data: 'Fim', title: 'Fim', width: '100px',
                         render: function (data) { return fmtDate(data); }
                     },
                     {   // 6) Ações
                         data: null, orderable: false, searchable: false, className: 'dt-actions',
-                        width: '100px', // NOVO: largura reduzida
+                        width: '100px',
                         defaultContent: '',
                         render: function (data, type, row) {
                             return `
@@ -527,7 +566,6 @@
                     }
                 ],
 
-                // Busca customizada
                 initComplete: function () {
                     const api = this.api();
 
@@ -545,7 +583,7 @@
                 }
             });
 
-            // NOVO: Event listener para checkboxes individuais
+            // Seleções
             $(document).on('change', '.row-checkbox', function () {
                 const $this = $(this);
                 const cdSistema = $this.data('sistema');
@@ -554,88 +592,95 @@
 
                 toggleSelecao(cdSistema, cdFuncao, isChecked);
 
-                // Atualiza o checkbox "selecionar todos"
                 const totalCheckboxes = $('.row-checkbox').length;
                 const checkedCheckboxes = $('.row-checkbox:checked').length;
                 const checkAll = $('.js-check-all');
 
                 if (checkedCheckboxes === 0) {
-                    checkAll.prop('indeterminate', false);
-                    checkAll.prop('checked', false);
+                    checkAll.prop('indeterminate', false).prop('checked', false);
                 } else if (checkedCheckboxes === totalCheckboxes) {
-                    checkAll.prop('indeterminate', false);
-                    checkAll.prop('checked', true);
+                    checkAll.prop('indeterminate', false).prop('checked', true);
                 } else {
                     checkAll.prop('indeterminate', true);
                 }
             });
 
-            // NOVO: Event listener para checkbox "selecionar todos"
             $(document).on('change', '.js-check-all', function () {
                 const isChecked = $(this).is(':checked');
                 $('.row-checkbox').each(function () {
                     const $checkbox = $(this);
                     $checkbox.prop('checked', isChecked);
-
-                    const cdSistema = $checkbox.data('sistema');
-                    const cdFuncao = $checkbox.data('funcao');
-                    toggleSelecao(cdSistema, cdFuncao, isChecked);
+                    toggleSelecao($checkbox.data('sistema'), $checkbox.data('funcao'), isChecked);
                 });
             });
 
-            // NOVO: Event listener para botão enviar selecionados
             $('#btnEnviarSelecionados').on('click', function () {
                 if (selecionados.length === 0) {
                     alert('Nenhum item selecionado.');
                     return;
                 }
-
-                // Pega o primeiro selecionado para compatibilidade com o form original
                 const primeiro = selecionados[0];
                 $('#hidSistemaSel').val(primeiro.cdSistema);
                 $('#hidFuncaoSel').val(primeiro.cdFuncao);
-
-                // Submete o formulário oculto
                 $('#frmHidden').submit();
             });
 
-            // 1) Clique na linha → preenche hiddens
+            // Clique na linha → preenche hiddens
             $(document).on('click', '#tblGrupos tbody tr', function (e) {
-                // Evita disparar se clicou em botão ou checkbox
                 if ($(e.target).closest('button, .btn, input[type="checkbox"]').length) return;
-
                 const data = dt.row(this).data();
                 if (!data) return;
-
                 $('#hidSistemaSel').val(data.Sistema);
-                $('#hidFuncaoSel').val(data.Grupo); // "função" = Grupo nesta tela
+                $('#hidFuncaoSel').val(data.Grupo);
             });
 
-            // 4) Clique nos botões de ação → também preenche hiddens
+            // Clique nos botões de ação → também preenche hiddens
             $(document).on('click', '.btn-edit, .btn-delete', function (e) {
-                e.stopPropagation(); // evita disparar clique da linha
+                e.stopPropagation();
                 $('#hidSistemaSel').val($(this).data('sistema'));
                 $('#hidFuncaoSel').val($(this).data('grupo'));
             });
 
-            // Botão Novo
+            /* ======================
+               BOTÃO NOVO: modo create
+            =======================*/
             $('#btnNovo').on('click', function () {
                 $('#mode').val('create');
                 $('#modalTitulo').text('Incluir grupo ao usuário');
                 $('#OrigCdSistema').val('');
                 $('#OrigCdGrUser').val('');
                 $('#frmNovo')[0].reset();
+
+                const $sis = $('#CdSistema');
+                const $grp = $('#CdGrUser');
+
+                // Habilita selects e reseta grupo
+                $sis.prop('disabled', false);
+                $grp.prop('disabled', true).html('<option value="">Selecione um sistema primeiro...</option>');
+
+                // Datas padrão
+                const hoje = new Date().toISOString().substring(0, 10);
+                $('#DtIniVal').val(hoje);
+                $('#DtFimVal').val('');
+
+                // Carrega sistemas
+                carregarSistemas($sis).then(() => {
+                    // nada além de popular
+                });
+
                 $('#modalNovo').modal('show');
             });
 
-            // Exportações (disparam os botões "ocultos")
+            // Exportações
             $('#exportExcel').on('click', function () { dt.button('.buttons-excel').trigger(); });
             $('#exportCsv').on('click',   function () { dt.button('.buttons-csv').trigger();   });
             $('#exportPdf').on('click',   function () { dt.button('.buttons-pdf').trigger();   });
             $('#exportPrint').on('click', function () { dt.button('.buttons-print').trigger(); });
         });
 
-        // Botão Editar (carrega registro e abre modal)
+        /* ======================
+           EDITAR: abre modal
+        =======================*/
         $(document).on('click', '.btn-edit', function () {
             const btn = $(this);
             const cdSis = btn.data('sistema');
@@ -648,25 +693,57 @@
                 success: function (data) {
                     const registro = data.find(x => x.Sistema === cdSis && x.Grupo === cdGrp);
 
-                    if (registro) {
-                        $('#mode').val('edit');
-                        $('#modalTitulo').text('Editar vínculo de grupo');
-                        $('#OrigCdSistema').val(cdSis);
-                        $('#OrigCdGrUser').val(cdGrp);
-                        $('#CdSistema').val(registro.Sistema);
-                        $('#CdGrUser').val(registro.Grupo);
+                    if (!registro) {
+                        alert('Registro não encontrado.');
+                        return;
+                    }
+
+                    $('#mode').val('edit');
+                    $('#modalTitulo').text('Editar vínculo de grupo');
+                    $('#OrigCdSistema').val(cdSis);
+                    $('#OrigCdGrUser').val(cdGrp);
+
+                    const $sis = $('#CdSistema');
+                    const $grp = $('#CdGrUser');
+
+                    // Carrega sistemas, seleciona o sistema do registro e depois carrega grupos e seleciona o grupo
+                    carregarSistemas($sis).then(() => {
+                        $sis.val(registro.Sistema);
+                        return carregarGruposPorSistema(registro.Sistema, $grp);
+                    }).then(() => {
+                        $grp.val(registro.Grupo);
+
+                        // Em edição: bloquear selects (somente datas podem ser alteradas)
+                        $sis.prop('disabled', true);
+                        $grp.prop('disabled', true);
+
+                        // Datas
                         $('#DtIniVal').val(registro.Inicio ? new Date(registro.Inicio).toISOString().split('T')[0] : '');
                         $('#DtFimVal').val(registro.Fim ? new Date(registro.Fim).toISOString().split('T')[0] : '');
+
                         $('#modalNovo').modal('show');
-                    } else {
-                        alert('Registro não encontrado.');
-                    }
+                    });
                 },
                 error: function () { alert('Erro ao buscar dados do registro.'); }
             });
         });
 
-        // Botão Excluir
+        /* ======================
+           ALTERA SISTEMA (CREATE)
+        =======================*/
+        $(document).on('change', '#CdSistema', function () {
+            const $grp = $('#CdGrUser');
+            const cdsistema = $(this).val();
+
+            // Só reage no modo create (no edit está desabilitado)
+            if ($('#mode').val() !== 'create') return;
+
+            carregarGruposPorSistema(cdsistema, $grp);
+        });
+
+        /* ======================
+           EXCLUIR
+        =======================*/
         $(document).on('click', '.btn-delete', function () {
             const btn = $(this);
             const cdSis = btn.data('sistema');
@@ -685,7 +762,6 @@
                 success: function (response) {
                     if (response.success) {
                         $('#modalNovo').modal('hide');
-                        // Recarrega mantendo a página atual
                         const api = $('#tblGrupos').DataTable();
                         api.ajax.reload(null, false);
                         alert('Registro excluído com sucesso.');
@@ -697,7 +773,9 @@
             });
         });
 
-        // Submit do formulário (Create/Update)
+        /* ======================
+           SUBMIT (CREATE/UPDATE)
+        =======================*/
         $('#frmNovo').on('submit', function (e) {
             e.preventDefault();
 
@@ -706,10 +784,19 @@
                 ? '@Url.Action("Update", "UsuarioGrupo", new { area = "SEG" })'
                 : '@Url.Action("Create", "UsuarioGrupo", new { area = "SEG" })';
 
+            // Valida selects (especialmente em create)
+            const $sis = $('#CdSistema');
+            const $grp = $('#CdGrUser');
+            let ok = true;
+
+            if (!$sis.prop('disabled') && !$sis.val()) { $sis.addClass('is-invalid'); ok = false; } else { $sis.removeClass('is-invalid'); }
+            if (!$grp.prop('disabled') && !$grp.val()) { $grp.addClass('is-invalid'); ok = false; } else { $grp.removeClass('is-invalid'); }
+            if (!ok) return;
+
             const formData = {
                 cdUsuarioID: $('#CdUsuario').val(),
-                cdSistema:   $('#CdSistema').val().trim(),
-                cdGrUser:    $('#CdGrUser').val().trim(),
+                cdSistema:   $('#CdSistema').val(),
+                cdGrUser:    $('#CdGrUser').val(),
                 dtIniVal:    $('#DtIniVal').val() || null,
                 dtFimVal:    $('#DtFimVal').val() || null
             };
@@ -739,4 +826,3 @@
         });
     </script>
 }
-

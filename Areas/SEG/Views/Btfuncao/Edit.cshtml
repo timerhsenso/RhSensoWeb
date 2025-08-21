@@ -11,6 +11,15 @@
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
     ViewData["IsEdit"] = true;
 }
+
+@section styles {
+    <style>
+        [data-page="seg-btfuncao-edit"] nav[aria-label="breadcrumb"] {
+            --ins-breadcrumb-divider: "";
+        }
+    </style>
+}
+
 @await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
 
 @if (TempData["SuccessMessage"] != null)
@@ -22,14 +31,15 @@
     <div class="alert alert-danger" role="alert">@TempData["ErrorMessage"]</div>
 }
 
-<div class="container-fluid">
+<main data-page="seg-btfuncao-edit" class="container-fluid">
     @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
     <div class="card">
         <div class="card-body">
-            <form asp-action="Edit" method="post">
+            <form asp-area="SEG" asp-controller="Btfuncao" asp-action="Edit" method="post" role="form" aria-label="Formulário de edição de botão por função">
                 @Html.AntiForgeryToken()
-                @* As chaves vão como hidden para garantir o post mesmo com inputs readonly *@
+
+                <!-- chaves como hidden garantem o post mesmo com readonly -->
                 <input type="hidden" asp-for="Cdsistema" />
                 <input type="hidden" asp-for="Cdfuncao" />
                 <input type="hidden" asp-for="Nmbotao" />
@@ -37,14 +47,67 @@
                 @await Html.PartialAsync("_FormFields", Model)
 
                 <div class="mt-3 d-flex gap-2">
-                    <a asp-action="Index" class="btn btn-outline-secondary"><i class="fa fa-arrow-left me-2"></i>Voltar</a>
-                    <button type="submit" class="btn btn-primary"><i class="fa fa-save me-2"></i>Salvar</button>
+                    <a asp-area="SEG" asp-controller="Btfuncao" asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-2"></i>Voltar
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-save me-2"></i>Salvar
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
+</main>
 
 @section scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="~/plugins/select2/select2.min.js"></script>
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+            const $sistema = $('#selSistema');
+            const $funcao  = $('#selFuncao');
+
+            function initSelect2Safe($el) {
+                if (!$el?.length || $el.data('select2')) return;
+                try { $el.select2({ width:'100%', placeholder:'Selecione...' }); } catch {}
+            }
+            initSelect2Safe($sistema);
+            initSelect2Safe($funcao);
+
+            function repopular($select, items, placeholder, manterValor) {
+                if (!$select?.length) return;
+                $select.prop('disabled', true).empty();
+                if (placeholder) $select.append(new Option(placeholder, '', true, false));
+                (items||[]).forEach(it=>{
+                    const v=it.id ?? it.value ?? it.Value ?? '';
+                    const t=it.text ?? it.Text ?? v;
+                    $select.append(new Option(t, v, false, false));
+                });
+                $select.val(manterValor||'').trigger('change');
+                $select.prop('disabled', !(items&&items.length) && !!placeholder);
+            }
+
+            async function carregarFuncoes(cdsistema, manterValor) {
+                if (!cdsistema) { repopular($funcao, [], 'Selecione um sistema primeiro...', ''); return; }
+                repopular($funcao, [], 'Carregando...', '');
+                const url = '@Url.Action("GetFuncoesBySistema", "Btfuncao", new { area = "SEG" })' + '?cdsistema=' + encodeURIComponent(String(cdsistema||'').toUpperCase());
+                try {
+                    const res = await fetch(url, { headers: { 'X-Requested-With':'XMLHttpRequest' } });
+                    let data = await res.json(); if (!Array.isArray(data)) data = [];
+                    const itens = data.map(it => ({ id: it.id ?? it.value ?? it.Value ?? '', text: it.text ?? it.Text ?? (it.id ?? it.value ?? it.Value ?? '') }));
+                    repopular($funcao, itens, 'Selecione...', manterValor||'');
+                } catch { repopular($funcao, [], 'Erro ao carregar funções.', ''); }
+            }
+
+            // no Edit, os valores já vêm preenchidos
+            document.addEventListener('DOMContentLoaded', function () {
+                const sis = ($sistema.val() || '@(Model?.Cdsistema ?? "")');
+                const fun = '@(Model?.Cdfuncao ?? "")';
+                if (sis) carregarFuncoes(sis, fun);
+                else repopular($funcao, [], 'Selecione um sistema primeiro...', '');
+            });
+        })();
+    </script>
 }

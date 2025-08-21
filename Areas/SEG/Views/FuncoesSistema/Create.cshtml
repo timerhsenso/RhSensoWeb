@@ -6,6 +6,20 @@
 }
 
 @section styles {
+
+
+    <!-- Choices Plugin CSS-->
+    <link rel="stylesheet" href="~/plugins/choices/choices.min.css">
+
+    <!-- Tagify Plugin CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@@yaireo/tagify@4.35.1/dist/tagify.min.css">
+
+    <!-- Select Plugin CSS -->
+    <link rel="stylesheet" href="~/plugins/select2/select2.min.css">
+
+    <!-- Tagify Plugin CSS -->
+    <link rel="stylesheet" href="~/plugins/tagify/tagify.css">
+
     <style>
         /* Apenas visual; o bloqueio real é no oninput + no controller */
         .text-uppercase {
@@ -27,7 +41,8 @@
                 <!-- Sistema: só ativos (preenchido pelo helper PopulateSistemasSelectList) -->
                 <div class="col-md-4">
                     <label asp-for="CdSistema" class="form-label">Sistema</label>
-                    <select asp-for="CdSistema" asp-items="ViewBag.Sistemas" class="form-select" required>
+                                        
+                        <select asp-for="CdSistema" asp-items="ViewBag.Sistemas" class="form-control select2" data-toggle="select2"  required>
                         <option value="">-- selecione --</option>
                     </select>
                     <span asp-validation-for="CdSistema" class="text-danger"></span>
@@ -74,4 +89,24 @@
 
 @section scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <!-- Choises.js Plugin Js -->
+    <script src="~/plugins/choices/choices.min.js"></script>
+
+    <!-- Tagify Plugin Js (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@@yaireo/tagify@4.35.1/dist/tagify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@yaireo/dragsort@1.3.2/dist/dragsort.min.js"></script>
+
+    <!-- Select2 Plugin Js -->
+    <script src="~/plugins/select2/select2.min.js"></script>
+
+    <!-- Choices Demo Js-->
+    <script src="~/js/pages/form-choice.js"></script>
+
+    <!-- Tagify Demo Js -->
+    <script src="~/js/pages/form-tagify.js"></script>
+
+    <!--Select 2 Demo js-->
+    <script src="~/js/pages/form-select2.js"></script>
+
 }
