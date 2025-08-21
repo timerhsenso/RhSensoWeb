@@ -1,0 +1,252 @@
+@{
+    ViewData["Title"] = "Debug do Sistema";
+    var sessionKeys = Context.Session.Keys.ToList();
+    var cookies = Context.Request.Cookies.ToList();
+}
+
+<div class="container mt-5">
+    <h1 class="mb-4 text-primary">Debug do Sistema</h1>
+
+
+    @using Microsoft.AspNetCore.Http
+    @using RhSensoWeb.DTOs
+    @using RhSensoWeb.Models
+
+    @{
+        // Carrega objetos da sessão (seguro: se não existir, vira lista vazia)
+        var constantes = Context.Session.GetObject<List<Const1>>("Constantes") ?? new List<Const1>();
+        var userPerms = Context.Session.GetObject<List<UserPermissionDto>>("UserPermissions") ?? new List<UserPermissionDto>();
+    }
+    <div class="card border-info mb-4">
+        <div class="card-header bg-info text-white">
+            <strong>Constantes (Session["Constantes"])</strong>
+            <span class="badge bg-dark ms-2">@constantes.Count</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 180px;">Cdconstante</th>
+                            <th style="width: 320px;">Dcconstante</th>
+                            <th>Dcconteudo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (constantes.Count == 0)
+                        {
+                            <tr><td colspan="3" class="text-muted text-center py-3">Sem dados.</td></tr>
+                        }
+                        else
+                        {
+                            foreach (var c in constantes)
+                            {
+                                <tr>
+                                    <td>@c.Cdconstante</td>
+                                    <td>@c.Dcconstante</td>
+                                    <td>@c.Dcconteudo</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card border-primary mb-4">
+        <div class="card-header bg-primary text-white">
+            <strong>Permissões (Session["UserPermissions"])</strong>
+            <span class="badge bg-dark ms-2">@userPerms.Count</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 240px;">FunctionCode</th>
+                            <th style="width: 160px;">ActionCode</th>
+                            <th style="width: 120px;">SystemCode</th>
+                            <th style="width: 220px;">ModuleName</th>
+                            <th>ModuleDescription</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (userPerms.Count == 0)
+                        {
+                            <tr><td colspan="5" class="text-muted text-center py-3">Sem dados.</td></tr>
+                        }
+                        else
+                        {
+                            foreach (var p in userPerms)
+                            {
+                                <tr>
+                                    <td>@p.FunctionCode</td>
+                                    <td>@p.ActionCode</td>
+                                    <td>@p.SystemCode</td>
+                                    <td>@p.ModuleName</td>
+                                    <td>@p.ModuleDescription - 
+                                        @p.ActionRestric
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="mb-3">
+        <button id="btnRecarregarHabilitacoes" class="btn btn-primary me-2">Recarregar Habilitações</button>
+        <button id="btnRecarregarConstantes" class="btn btn-warning me-2">Recarregar Constantes</button>
+        <button id="btnLimparTudo" class="btn btn-danger">Limpar Sessão e Cookies</button>
+    </div>
+
+    <div id="alerta" class="alert alert-info d-none" role="alert"></div>
+
+    <hr />
+    <h2 class="text-success">Session (Sessão)</h2>
+    @if (sessionKeys.Count > 0)
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Chave</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var key in sessionKeys)
+                {
+                    <tr>
+                        <td>@key</td>
+                        <td>
+                            @{
+                                var value = Context.Session.GetString(key);
+                                if (!string.IsNullOrEmpty(value) && value.Length > 250)
+                                {
+                                    <span>@value.Substring(0, 250)... (truncado)</span>
+                                }
+                                else
+                                {
+                                    <span>@value</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhuma sessão registrada.</em></p>
+    }
+
+    <hr />
+    <h2 class="text-success">Cookies</h2>
+    @if (cookies.Count > 0)
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cookie in cookies)
+                {
+                    <tr>
+                        <td>@cookie.Key</td>
+                        <td>
+                            @{
+                                var value = cookie.Value;
+                                if (!string.IsNullOrEmpty(value) && value.Length > 250)
+                                {
+                                    <span>@value.Substring(0, 250)... (truncado)</span>
+                                }
+                                else
+                                {
+                                    <span>@value</span>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhum cookie registrado.</em></p>
+    }
+
+    <hr />
+    <h2 class="text-success">Claims do Usuário</h2>
+    @if (User.Identity.IsAuthenticated && User.Claims.Any())
+    {
+        <table class="table table-sm table-bordered">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var claim in User.Claims)
+                {
+                    <tr>
+                        <td>@claim.Type</td>
+                        <td>@claim.Value</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p><em>Nenhuma claim registrada.</em></p>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function showAlert(msg, tipo = "info") {
+            var alerta = document.getElementById("alerta");
+            alerta.className = "alert alert-" + tipo;
+            alerta.innerText = msg;
+            alerta.classList.remove("d-none");
+            setTimeout(() => alerta.classList.add("d-none"), 2500);
+        }
+
+        document.getElementById("btnRecarregarHabilitacoes").onclick = function () {
+            fetch('/api/UtilsApi/RecarregarHabilitacoes', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    showAlert(data.message, data.success ? "success" : "danger");
+                    setTimeout(() => location.reload(), 1200);
+                });
+        };
+
+        document.getElementById("btnRecarregarConstantes").onclick = function () {
+            fetch('/api/UtilsApi/RecarregarConstantes', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    showAlert(data.message, data.success ? "success" : "danger");
+                    setTimeout(() => location.reload(), 1200);
+                });
+        };
+
+        document.getElementById("btnLimparTudo").onclick = function () {
+            fetch('/api/UtilsApi/LimparTudo', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    showAlert(data.message, data.success ? "success" : "danger");
+                    setTimeout(() => location.reload(), 1200);
+                });
+        };
+    </script>
+}
