@@ -3,28 +3,26 @@
     ViewBag.Views = "Tsistema";
     ViewBag.Controller = "Tsistema";
     ViewBag.HabilitaBtnNovo = true;
-    ViewBag.HabilitaBtnExportar = true;    
+    ViewBag.HabilitaBtnExportar = true;
     //
     ViewBag.Title = "Tabela de Sistemas";
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
-    
 }
 
 @section styles {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
     <style>
-        /* Tabela compacta */
+        /* ===== Tabela compacta (#tblSistemas) ===== */
         #tblSistemas thead th {
             font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
             font-size: 12px;
             font-weight: 600;
             color: #676a6c;
             vertical-align: middle;
-            padding: 4px 8px !important;
-            line-height: 1.1 !important;
-            height: 32px !important;
+            padding: 4px 8px;
+            line-height: 1.1;
         }
 
         #tblSistemas tbody td {
@@ -40,7 +38,7 @@
 
         #tblSistemas .btn-group-sm .btn {
             padding: 4px 8px;
-            font-size: 12px;
+            font-size: 11px;
         }
 
         #tblSistemas .form-check {
@@ -54,7 +52,7 @@
             font-size: 14px;
         }
 
-        /* Toolbar: TUDO à direita, numa única linha */
+        /* ===== Toolbar / busca (dependem do partial) ===== */
         .toolbar-right {
             display: flex;
             align-items: center;
@@ -63,6 +61,10 @@
             flex-wrap: nowrap;
             width: 100%;
         }
+
+            .toolbar-right .btn {
+                white-space: nowrap;
+            }
 
         .search-fixed {
             width: clamp(260px,38vw,520px);
@@ -79,7 +81,7 @@
             top: 50%;
             transform: translateY(-50%);
             background: none;
-            border: none;
+            border: 0;
             color: #6c757d;
             cursor: pointer;
             width: 20px;
@@ -92,54 +94,21 @@
                 display: block;
             }
 
-        .toolbar-right .btn {
-            white-space: nowrap;
-        }
-
-        /* Favorito */
+        /* ===== Botão favorito (remova se não usar) ===== */
         .btn-fav {
             transition: background-color .2s,color .2s,box-shadow .2s;
         }
 
             .btn-fav.btn-warning, .btn-fav.btn-warning .fa-star {
-                color: #fff !important;
+                color: #fff;
             }
 
-        @@keyframes pulse {
-            0% {
-                transform: scale(1)
-            }
-
-            50% {
-                transform: scale(1.15)
-            }
-
-            100% {
-                transform: scale(1)
-            }
-        }
-
-        .pulse-animation {
-            animation: pulse .3s ease-out;
-        }
-
-        /* Paginação à direita */
-        div.dataTables_paginate {
-            text-align: right !important;
-        }
-
+        /* ===== Paginação alinhada à direita ===== */
         .dataTables_paginate .pagination {
-            justify-content: flex-end !important;
+            justify-content: flex-end;
         }
 
-        /* Marcador de ColReorder */
-        .dt-colreorder-marker {
-            background: #3a3f52 !important;
-            border: 1px dashed #5c6178 !important;
-            box-shadow: 0 0 10px rgba(0,0,0,.5);
-        }
-
-        /* Resize de colunas (colResizable) */
+        /* ===== colResizable (necessário p/ plugin) ===== */
         #tblSistemas {
             table-layout: auto;
         }
@@ -176,38 +145,40 @@
             .JCLRgrip.dragging .JColResizer {
                 border-right-color: rgba(13,110,253,.6);
             }
+
+        /* ===== ColReorder (remover se não usar) ===== */
+        /* .dt-colreorder-marker {
+                    background: #3a3f52; border: 1px dashed #5c6178; box-shadow: 0 0 10px rgba(0,0,0,.5);
+                } */
     </style>
 
     <style>
-        /* ...suas regras que já existem... */
-
-        /* Força o estilo “soft” no botão colvis (normal/hover/focus/active) */
+        /* ===== Botão ColVis "soft" em #columnButtons ===== */
         #columnButtons .dt-button.btn-soft-primary,
         #columnButtons .dt-button.btn-soft-primary:hover,
         #columnButtons .dt-button.btn-soft-primary:focus,
         #columnButtons .dt-button.btn-soft-primary:active,
         #columnButtons .dt-button.btn-soft-primary.active {
-            background-color: var(--bs-primary-bg-subtle) !important;
-            border-color: var(--bs-primary-border-subtle) !important;
-            color: var(--bs-primary) !important;
-            box-shadow: none !important;
+            background-color: var(--bs-primary-bg-subtle);
+            border-color: var(--bs-primary-border-subtle);
+            color: var(--bs-primary);
+            box-shadow: none;
         }
 
-            /* Setinha do dropdown acompanha a cor do texto */
             #columnButtons .dt-button.btn-soft-primary .dt-down-arrow {
-                border-top-color: currentColor !important;
+                border-top-color: currentColor;
             }
     </style>
-
 }
 
 <!-- Container Toast de Alerta -->
 @await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
 
+<!-- Titulo e Relegógio -->
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
+<!-- Barra de pesquisa e botões de novo e exportação -->
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
-
 
 <!-- Body Begin  -->
 <div class="row mb-2">
@@ -231,19 +202,41 @@
                 </thead>
                 <tbody></tbody>
             </table>
-
             <!-- // #001 //-->
         </form>
     </div>
 </div>
 <!-- Body End  -->
-
-
 <!-- AntiForgery -->
 <form id="__ajaxAntiForgery" class="d-none">
     @Html.AntiForgeryToken()
 </form>
 
+<!-- =============================================== -->
+<!-- ============== MODAL DE FORMULÁRIO ============ -->
+<!-- =============================================== -->
+<div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Carregando...</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="p-3 text-center text-muted">
+                    <i class="fa fa-spinner fa-spin me-2"></i>Carregando formulário...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button id="modalSave" type="button" class="btn btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- =============================================== -->
+<!-- ============ FIM DO MODAL ===================== -->
+<!-- =============================================== -->
 @section scripts {
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -258,8 +251,6 @@
     <script>
         (function () {
             const layoutToastEl = document.getElementById('layoutToast');
-        
-            // ✅ GUARDA bootstrap para não quebrar o restante do script se não estiver carregado
             const layoutToast = (layoutToastEl && window.bootstrap) ? new bootstrap.Toast(layoutToastEl) : null;
 
             const exportMeta = {
@@ -305,24 +296,24 @@
                     },
                     { data: 'cdsistema', width: '100px' },
                     { data: 'dcsistema' },
-        {
-            data: 'ativo',
-            width: '90px',
-            className: 'text-center',
-            orderable: false,
-            searchable: false,
-            render: (data, _type, row) => {
-                const id = String(row.cdsistema ?? '').trim();
-                const checked = (data===true || data===1 || data==='1' || data==='S') ? 'checked' : '';
-                return `
-                  <div class="form-check form-switch m-0 d-inline-flex align-items-center">
-                    <input type="checkbox"
-                           class="form-check-input js-switch-ativo"
-                           data-id="${id}" ${checked}
-                           title="${checked ? 'Desativar' : 'Ativar'}">
-                  </div>`;
-            }
-        },
+                    {
+                        data: 'ativo',
+                        width: '90px',
+                        className: 'text-center',
+                        orderable: false,
+                        searchable: false,
+                        render: (data, _type, row) => {
+                            const id = String(row.cdsistema ?? '').trim();
+                            const checked = (data===true || data===1 || data==='1' || data==='S') ? 'checked' : '';
+                            return `
+                              <div class="form-check form-switch m-0 d-inline-flex align-items-center">
+                                <input type="checkbox"
+                                       class="form-check-input js-switch-ativo"
+                                       data-id="${id}" ${checked}
+                                       title="${checked ? 'Desativar' : 'Ativar'}">
+                              </div>`;
+                        }
+                    },
                     {
                         data: null, orderable: false, searchable: false, className: 'text-end', width: '120px',
                         render: (_d,_t,row) => {
@@ -331,8 +322,12 @@
                             const delBase  = '@Url.Action("Delete", "Tsistema", new { area = "SEG" })';
                             return `
                               <div class="btn-group btn-group-sm" role="group">
-                                <a class="btn btn-success" href="${editBase}/${encodeURIComponent(id)}" title="Editar"><i class="fa fa-pen"></i></a>
-                                <a class="btn btn-danger" href="${delBase}/${encodeURIComponent(id)}"  title="Excluir"><i class="fa fa-trash"></i></a>
+                                <button class="btn btn-success btn-edit" data-id="${id}" title="Editar">
+                                  <i class="fa fa-pen"></i>
+                                </button>
+                                <a class="btn btn-danger" href="${delBase}/${encodeURIComponent(id)}"  title="Excluir">
+                                  <i class="fa fa-trash"></i>
+                                </a>
                               </div>`;
                         }
                     }
@@ -409,9 +404,7 @@
                         text: '<i data-lucide="list" class="fs-lg"></i>',
                         titleAttr: 'Visibilidade das colunas',
                         columns: ':not(:first-child):not(:last-child)',
-                        init: function (_api, node) {
-                          $(node).removeClass('btn-secondary');
-                        }
+                        init: function (_api, node) { $(node).removeClass('btn-secondary'); }
                       }]
                     });
                     $(colvis.container()).appendTo('#columnButtons');
@@ -504,13 +497,12 @@
               }
             } catch { return; }
 
-            // spinner + desabilita o link (âncoras não respeitam disabled => usa .disabled do Bootstrap)
+            // spinner + desabilita o link
             const prevHTML = $btn.html();
             $btn.addClass('disabled').attr('aria-disabled', 'true').css('pointer-events', 'none')
                 .html('<i class="fa fa-spinner fa-spin"></i>');
 
             try {
-              // monta requisição (preferindo DeleteByToken)
               const url = token ? delByTokenUrl : href;
               const opts = { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } };
 
@@ -521,7 +513,6 @@
                 opts.headers['Content-Type'] = 'application/json; charset=utf-8';
                 opts.body = JSON.stringify({ token });
               } else {
-                // quando não há token, alguns filtros exigem o token no body
                 opts.headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
                 opts.body = new URLSearchParams({ '__RequestVerificationToken': af });
               }
@@ -531,9 +522,7 @@
               if (!res.ok) {
                 let msg = '';
                 try { msg = await res.text(); } catch {}
-                if (res.status === 409) { // FK/dependências
-                  throw new Error(msg || 'Erro ao excluir. Verifique dependências.');
-                }
+                if (res.status === 409) { throw new Error(msg || 'Erro ao excluir. Verifique dependências.'); }
                 throw new Error(msg || `Falha ao excluir (HTTP ${res.status}).`);
               }
 
@@ -552,135 +541,9 @@
             } catch (err) {
               window.showToast?.({ title: 'Erro', message: err?.message || 'Falha ao excluir.', variant: 'danger' });
             } finally {
-              // SEMPRE restaura o botão (mesmo que o DT recarregue depois)
-              $btn.removeClass('disabled').removeAttr('aria-disabled').css('pointer-events', '')
-                  .html(prevHTML);
+              $btn.removeClass('disabled').removeAttr('aria-disabled').css('pointer-events', '').html(prevHTML);
             }
           });
-        })();
-    </script>
-
-    <script>
-        (function () {
-          if (!window.DT) window.DT = {};
-
-          /**
-           * Exclusão em massa (chame a partir do seu dropdown)
-           * @@param {object} cfg
-           *  - tableId: id da tabela (ex.: 'tblSistemas')
-           *  - deleteBaseUrl: base do endpoint Delete (ex.: '/SEG/Tsistema/Delete')
-           *  - method: 'POST' | 'DELETE' (default 'POST')
-           *  - itemSelector: seletor dos checkboxes de linha (default '.row-check')
-           *  - masterSelector: seletor do checkbox mestre (default '#checkAll')
-           */
-          window.DT.bulkDelete = async function (cfg) {
-            const {
-              tableId,
-              deleteBaseUrl,
-              method = 'POST',
-              itemSelector = '.row-check',
-              masterSelector = '#checkAll'
-            } = cfg || {};
-
-            const api = window.dataTable || (tableId ? $('#' + tableId).DataTable() : null);
-            if (!api) { showToast({ title: 'Aviso', message: 'Tabela não inicializada.', variant: 'info' }); return; }
-
-            // IDs marcados (página atual) + trim
-            const nodes = api.rows({ page: 'current' }).nodes();
-            const ids = $(nodes).find(itemSelector + ':checked')
-              .map((_, el) => String(el.value || '').trim())
-              .get();
-
-            if (!ids.length) { 
-                            showToast({ title: 'Atenção', message: 'Selecione ao menos um registro.', variant: 'warning' }); return;
-
-            }
-
-            // Confirmação
-            try {
-              if (window.confirmModal) {
-                await window.confirmModal({
-                  title: 'Excluir selecionados',
-                  message: `Você está prestes a excluir <b>${ids.length}</b> registro(s). Deseja continuar?`,
-                  okText: 'Excluir',
-                  cancelText: 'Cancelar',
-                  okClass: 'btn-danger'
-                });
-              } else if (!window.confirm(`Excluir ${ids.length} registro(s)?`)) {
-                return;
-              }
-            } catch { return; } // cancelado
-
-            // Cabeçalhos AJAX; AntiForgery vai no BODY
-            const headers = {
-              'X-Requested-With': 'XMLHttpRequest',
-              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-            };
-            const afToken = (typeof anti === 'function'
-              ? anti()
-              : (document.querySelector('input[name="__RequestVerificationToken"]')?.value || '')
-            );
-
-            let ok = 0, fail = 0, lastError = '';
-
-            // Exclui 1 a 1 (sequencial)
-            for (const id of ids) {
-              const url = `${deleteBaseUrl}/${encodeURIComponent(id)}`;
-              try {
-                // eslint-disable-next-line no-await-in-loop
-                const res = await fetch(url, {
-                  method,
-                  headers,
-                  credentials: 'same-origin',
-                  body: new URLSearchParams({ '__RequestVerificationToken': afToken })
-                });
-
-                if (!res.ok) {
-                  let body = '';
-                  try { body = await res.text(); } catch {}
-                  if (res.status === 429) body = body || 'Muitas operações em sequência. Aguarde alguns segundos e tente novamente.';
-                  fail++;
-                  lastError = `${res.status} ${res.statusText}${body ? ' — ' + body : ''}`;
-                  console.error('[BulkDelete] Falha', { id, url, status: res.status, statusText: res.statusText, body });
-                } else {
-                  ok++;
-                  console.log('[BulkDelete] OK', { id, url });
-                }
-              } catch (err) {
-                fail++;
-                lastError = (err && err.message) || 'Erro desconhecido';
-                console.error('[BulkDelete] Exceção', { id, url, err });
-              }
-            }
-
-            // Limpa o "selecionar todos" e recarrega mantendo estado
-            if (masterSelector) {
-              const master = document.querySelector(masterSelector);
-              if (master) { master.checked = false; master.indeterminate = false; }
-            }
-            api.ajax.reload(null, false);
-
-            // Feedback
-            if (fail === 0) {
-                      showToast({
-          title: 'Sucesso',
-          message: `${ok} registro(s) excluído(s) com sucesso.`,
-          variant: 'success'
-        });
-            } else if (ok === 0) {
-                      showToast({
-          title: 'Erro',
-          message: `Nenhum registro excluído. ${lastError || ''}`.trim(),
-          variant: 'danger'
-        });
-            } else {
-                      showToast({
-          title: 'Parcial',
-          message: `Excluídos: ${ok} • Falharam: ${fail}${lastError ? ` — ${lastError}` : ''}`,
-          variant: 'warning'
-        });
-            }
-          };
         })();
     </script>
 
@@ -694,7 +557,6 @@
             return el ? el.value : '';
           }
 
-          // Debounce + abort por ID
           const pending = new Map(); // id -> { timer, controller }
 
           $(document).on('change', '#tblSistemas .js-switch-ativo', function () {
@@ -703,7 +565,6 @@
             const desired = el.checked;
             if (!id) return;
 
-            // Cancela tentativa anterior para o mesmo ID
             const prev = pending.get(id);
             if (prev) {
               if (prev.timer) clearTimeout(prev.timer);
@@ -726,30 +587,22 @@
                   body: new URLSearchParams({ id, ativo: desired })
                 });
 
-                // tratamento de HTTP (inclui 429)
                 if (!res.ok) {
-                  if (res.status === 429) {
-                    throw new Error('Muitas alterações em sequência. Tente novamente em instantes.');
-                  }
+                  if (res.status === 429) { throw new Error('Muitas alterações em sequência. Tente novamente em instantes.'); }
                   throw new Error(await res.text());
                 }
 
                 const json = await res.json();
-                if (!json.success) {
-                  throw new Error(json.message || 'Falha ao atualizar.');
-                }
+                if (!json.success) { throw new Error(json.message || 'Falha ao atualizar.'); }
 
-                // ✅ sucesso → toast verde
                 showToast({
                   title: 'Sucesso',
                   message: json.message || (desired ? 'Sistema ativado.' : 'Sistema desativado.'),
                   variant: 'success'
                 });
               } catch (err) {
-                // Se foi abortado porque o usuário clicou de novo, não mostra erro
                 if (err && err.name === 'AbortError') return;
 
-                // Reverte o switch e mostra erro
                 el.checked = !desired;
                 showToast({
                   title: 'Erro',
@@ -767,22 +620,19 @@
         })();
     </script>
 
-
     <script>
         // Toast dinâmico: título, mensagem e cor (success|danger|warning|info)
         window.showToast = function ({ title = 'Aviso', message = '', variant = 'info', delay = 3500 } = {}) {
           const toastEl = document.getElementById('layoutToast');
-          if (!toastEl || !window.bootstrap) { alert(message || title); return; }         
+          if (!toastEl || !window.bootstrap) { alert(message || title); return; }
 
           const header = toastEl.querySelector('.toast-header');
           const titleEl = toastEl.querySelector('.toast-header .me-auto');
           const bodyEl  = toastEl.querySelector('.toast-body');
 
-          // Conteúdo
           if (titleEl)  titleEl.textContent = title;
           if (bodyEl)   bodyEl.textContent = message;
 
-          // Reset de classes e aplica cor no header
           header.classList.remove('bg-success','bg-danger','bg-warning','bg-info','text-white');
           const map = { success:'bg-success', danger:'bg-danger', warning:'bg-warning', info:'bg-info' };
           if (map[variant]) header.classList.add(map[variant], 'text-white');
@@ -790,9 +640,187 @@
           bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: true, delay }).show();
         };
     </script>
-       
+
+    <!-- =============================================== -->
+    <!-- ===== SCRIPTS DO MODAL (CORRIGIDO) ============ -->
+    <!-- =============================================== -->
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+
+    <script>
+        $(function () {
+          /* ---------- abre o modal e carrega o form via AJAX ---------- */
+          function openFormModal(url, title) {
+            const $modal = $('#formModal');
+            const $body  = $modal.find('.modal-body');
+            const $title = $modal.find('.modal-title');
+
+            $title.text(title || 'Formulário');
+            $body.html('<div class="p-4 text-center text-muted"><i class="fa fa-spinner fa-spin me-2"></i>Carregando formulário...</div>');
+
+            bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+
+            $.ajax({
+              url,
+              type: 'GET',
+              cache: false,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              data: { modal: 1 }
+            })
+            .done(function (html) {
+              $body.html(html);
+              // reativa validação unobtrusive no form carregado
+              if ($.validator && $.validator.unobtrusive) {
+                $.validator.unobtrusive.parse($body.find('form'));
+              }
+            })
+            .fail(function (xhr) {
+              const msg = xhr.status ? `Erro ao carregar formulário (HTTP ${xhr.status})` : 'Erro ao carregar formulário';
+              $body.html(`<div class="p-4 text-danger"><i class="fa fa-exclamation-triangle me-2"></i>${msg}</div>`);
+            });
+          }
+
+          /* ---------- intercepta "Novo" ---------- */
+          $(document).on('click', '#BtnCreateNew, #btnNovo, .btn-novo, a[href$="/SEG/Tsistema/Create"]', function (e) {
+            e.preventDefault(); e.stopPropagation();
+
+            let url = $(this).attr('href') || '@Url.Action("Create", "Tsistema", new { area = "SEG" })';
+            if (!url.includes('modal=1')) url += (url.includes('?')?'&':'?') + 'modal=1';
+
+            openFormModal(url, 'Novo Sistema');
+          });
+
+          /* ---------- intercepta "Editar" (botão da grid) ---------- */
+          $(document).on('click', '#tblSistemas .btn-edit', function (e) {
+            e.preventDefault(); e.stopPropagation();
+
+            const id = $(this).data('id');
+            if (!id) return;
+
+            const url = '@Url.Action("Edit", "Tsistema", new { area = "SEG" })' + '/' + encodeURIComponent(id) + '?modal=1';
+            openFormModal(url, 'Editar Sistema');
+          });
+
+          /* ---------- clique em "Salvar" -> envia submit do form ---------- */
+          $(document).on('click', '#modalSave', function (e) {
+            e.preventDefault();
+            const $form = $('#formModal form').first();
+            if ($form.length) $form.trigger('submit');
+          });
+
+          /* ---------- SUBMIT AJAX (Enter ou botão) ---------- */
+          $(document).off('submit.modalForm', '#formModal form');
+          $(document).on('submit.modalForm', '#formModal form', function (e) {
+            e.preventDefault();
+
+            const form = this;
+            const $form = $(form);
+            const $modal = $('#formModal');
+            const $btn = $('#modalSave');
+
+            // validação client-side
+            if (form.reportValidity && !form.reportValidity()) return;
+            if ($.validator) {
+              const v = $form.validate();
+              if (!v.form()) return;
+            }
+
+            // feedback
+            const prev = $btn.html();
+            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Salvando...');
+
+            $.ajax({
+              url: form.action,
+              type: (form.method || 'POST').toUpperCase(),
+              data: new FormData(form),
+              processData: false,
+              contentType: false,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            //---
+        .done(function (data, _textStatus, xhr) {
+          const ct = (xhr.getResponseHeader('Content-Type') || '').toLowerCase();
+
+          // Sucesso em JSON (se o controller devolver JSON)
+          if (ct.includes('application/json')) {
+            if (data && data.success) {
+              bootstrap.Modal.getInstance($('#formModal')[0]).hide();
+              (window.dataTable || $('#tblSistemas').DataTable()).ajax.reload(null, false);
+              window.showToast?.({ title:'Sucesso', message: data.message || 'Registro salvo.', variant:'success' });
+            } else {
+              window.showToast?.({ title:'Erro', message: (data && data.message) || 'Falha ao salvar.', variant:'danger' });
+            }
+            return;
+          }
+
+          // HTML → distinguir form (erro) de redirect/página (sucesso)
+          if (ct.includes('text/html')) {
+            const html = String(data || '');
+
+            // indícios de redirect (tratamos como sucesso)
+            const hasRedirectHints = /window\.(top\.)?location|http-equiv=["']refresh/i.test(html);
+
+            // o form da própria tela (Create/Edit de Tsistema)
+            const sameAction = /action=["'][^"']*\/SEG\/Tsistema\/(Create|Edit)/i.test(html);
+            const hasFormFields = /name=["'](cdsistema|dcsistema|ativo)["']/i.test(html);
+            const hasValidationUi = /(data-valmsg|validation-summary|input-validation-error|field-validation-error)/i.test(html);
+
+            const isFormBack = sameAction || (/<form[\s\S]*?>/i.test(html) && (hasFormFields || hasValidationUi));
+
+            if (!isFormBack || hasRedirectHints) {
+              // SUCESSO: veio outra página (ex.: Index) ou HTML com redirect
+              const $modal = $('#formModal');
+              bootstrap.Modal.getInstance($modal[0]).hide();
+              (window.dataTable || $('#tblSistemas').DataTable()).ajax.reload(null, false);
+              window.showToast?.({ title:'Sucesso', message:'Registro salvo.', variant:'success' });
+              return;
+            }
+
+            // ERRO DE VALIDAÇÃO: re-renderiza o form no modal
+            const $modal = $('#formModal');
+            $modal.find('.modal-body').html(html);
+            if ($.validator && $.validator.unobtrusive) {
+              $.validator.unobtrusive.parse($modal.find('form'));
+            }
+            window.showToast?.({ title:'Atenção', message:'Verifique os campos destacados.', variant:'warning' });
+            return;
+          }
+
+          // Fallback: fecha e recarrega
+          const $modal = $('#formModal');
+          bootstrap.Modal.getInstance($modal[0]).hide();
+          (window.dataTable || $('#tblSistemas').DataTable()).ajax.reload(null, false);
+        })
+
+            //--
+            .fail(function (xhr) {
+              const msg = xhr?.status ? `Falha ao salvar (HTTP ${xhr.status}).` : 'Falha ao salvar.';
+              window.showToast?.({ title:'Erro', message: msg, variant:'danger' });
+            })
+            .always(function () {
+              $btn.prop('disabled', false).html(prev);
+            });
+          });
+
+          /* ---------- limpar modal ao fechar ---------- */
+          $('#formModal').on('hidden.bs.modal', function () {
+            $(this).find('.modal-title').text('Formulário');
+            $(this).find('.modal-body').html('<div class="p-3 text-center text-muted">Carregando…</div>');
+          });
+
+          /* ---------- Enter envia o form (exceto textarea) ---------- */
+          $(document).on('keypress', '#formModal form input:not([type="submit"])', function (e) {
+            if (e.which === 13 && !$(e.target).is('textarea')) {
+              e.preventDefault();
+              $('#formModal form').first().trigger('submit');
+            }
+          });
+        });
+    </script>
+
+    <!-- =============================================== -->
+    <!-- ========= FIM DOS SCRIPTS DO MODAL ============ -->
+    <!-- =============================================== -->
 
     <script src="~/js/DataHora.js" asp-append-version="true"></script>
 
 }
-

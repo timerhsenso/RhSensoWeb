@@ -97,8 +97,36 @@
         </div>
 
         <!--- Sidenav Menu -->
+
+
+
+
+
         <ul class="side-nav">
+
+            <ul class="sub-menu">
+                <li class="side-nav-item">
+                    <a href=@Url.Action("Index", "Debug", new { area = "" }) class="side-nav-link">
+                        <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                        <span class="menu-text" data-lang="">Debug</span>
+                    </a>
+                </li>
+                <li class="side-nav-item">
+                    <a href=@Url.Action("AccessDenied", "Account", new { area = "" }) class="side-nav-link">
+                        <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                        <span class="menu-text" data-lang="">AccessDenied</span>
+                    </a>
+                </li>
+                <li class="side-nav-item">
+                    <a href=@Url.Action("Logout", "Account", new { area = "" }) class="side-nav-link">
+                        <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                        <span class="menu-text" data-lang="">GrupoFuncao</span>
+                    </a>
+                </li>
+            </ul>
+
             <li class="side-nav-title" data-lang="menu-title">Menu</li>
+
 
             <li class="side-nav-item">
                 <a data-bs-toggle="collapse" href="#sidebarDashboards" aria-expanded="false" aria-controls="sidebarDashboards" class="side-nav-link">
@@ -169,14 +197,14 @@
             <li class="side-nav-item">
                 <a href=@Url.Action("Index", "GrupoFuncao", new { area = "SEG" }) class="side-nav-link">
                     <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="landing-page">GrupoFuncao</span>
+                    <span class="menu-text" data-lang="">GrupoFuncao</span>
                 </a>
             </li>
 
             <li class="side-nav-item">
                 <a href=@Url.Action("Index", "Tsistema", new { area = "SEG" }) class="side-nav-link">
                     <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="landing-page">Tsistema</span>
+                    <span class="menu-text" data-lang="">Tsistema</span>
                 </a>
             </li>
 
@@ -184,7 +212,7 @@
             <li class="side-nav-item">
                 <a href=@Url.Action("Index", "FuncoesSistema", new { area = "SEG" }) class="side-nav-link">
                     <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="landing-page">FuncoesSistema</span>
+                    <span class="menu-text"> data-lang=""FuncoesSistema</span>
                 </a>
             </li>
 

@@ -55,8 +55,8 @@
                     @* Botão Novo *@
                     @if (habilitabtnovo && !string.IsNullOrWhiteSpace(controller))
                     {
-                        <a class="btn btn-info ms-1"
-                           href="@Url.Action("Create", controller, new { area = area })">
+                        <a id="BtnCreateNew" class="btn btn-info ms-1"
+                           href="@Url.Action("Create", controller, new { area = area })?">
                             <i data-lucide="plus" class="fs-sm me-3"></i> Novo
                         </a>
                     }

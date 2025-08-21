@@ -4,30 +4,58 @@
     ViewBag.Title = "Novo Sistema";
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    /* CORREÇÃO: detecção segura de modo modal */
+    var req = ViewContext?.HttpContext?.Request;
+    var isModal =
+        (req?.Query["modal"].ToString() == "1") ||
+        string.Equals(req?.Headers["X-Requested-With"].ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+    if (isModal) { Layout = null; } /* em modal não usamos o layout */
 }
 
-<div class="container-fluid">
+@if (isModal)
+{
+    <!-- MODO MODAL: apenas o <form> (sem botões do layout/página) -->
+    <form asp-area="SEG"
+          asp-controller="Tsistema"
+          asp-action="Create"
+          method="post" autocomplete="off" novalidate>
+        @Html.AntiForgeryToken()
 
-    @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div class="card">
-        <div class="card-body">
-            <form asp-area="SEG" asp-controller="Tsistema" asp-action="Create" method="post" autocomplete="off" novalidate>
-                @Html.AntiForgeryToken()
+        @await Html.PartialAsync("_FormFields", Model, new ViewDataDictionary(ViewData) { ["IsEdit"] = false })
+    </form>
+}
+else
+{
+    <div class="container-fluid">
 
-                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
-                @await Html.PartialAsync("_FormFields", Model, new ViewDataDictionary(ViewData) { ["IsEdit"] = false })
+        <div class="card">
+            <div class="card-body">
+                <form asp-area="SEG"
+                      asp-controller="Tsistema"
+                      asp-action="Create"
+                      method="post" autocomplete="off" novalidate>
+                    @Html.AntiForgeryToken()
 
-                <div class="mt-3 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                    <a asp-area="SEG" asp-controller="Tsistema" asp-action="Index" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </form>
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                    @await Html.PartialAsync("_FormFields", Model, new ViewDataDictionary(ViewData) { ["IsEdit"] = false })
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Salvar</button>
+                        <a asp-area="SEG" asp-controller="Tsistema" asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-</div>
 
-@section scripts {
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+    @section scripts {
+        @await Html.PartialAsync("_ValidationScriptsPartial")
+    }
 }
