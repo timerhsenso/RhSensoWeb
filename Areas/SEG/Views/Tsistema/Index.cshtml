@@ -245,6 +245,30 @@
 <!-- ============ FIM DO MODAL ===================== -->
 <!-- =============================================== -->
 @section scripts {
+    <script>
+      (function () {
+        window.getAfToken = function () {
+          return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value
+              || document.querySelector('#__anti input[name="__RequestVerificationToken"]')?.value
+              || document.querySelector('input[name="__RequestVerificationToken"]')?.value
+              || '';
+        };
+        window.pick = function (obj, ...keys) {
+          for (const k of keys) if (obj && obj[k] !== undefined) return obj[k];
+          return undefined;
+        };
+        if (window.$ && $.ajaxSetup) {
+          $.ajaxSetup({
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            beforeSend: function (xhr) {
+              const t = window.getAfToken();
+              if (t) xhr.setRequestHeader('RequestVerificationToken', t);
+            }
+          });
+        }
+      })();
+    </script>
+
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-colvis-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
@@ -541,8 +565,9 @@
                 const txt = await res.text();
                 if (txt) {
                   const json = JSON.parse(txt);
-                  if (json && json.success === false) throw new Error(json.message || 'Falha ao excluir.');
-                }
+                  const ok = pick(json,'success','Success'); const msg = pick(json,'message','Message') || '';
+                  if (ok === false) throw new Error(msg || 'Falha ao excluir.');
+}
               } catch { /* resposta não-json, tudo bem */ }
 
               // ok
@@ -603,7 +628,8 @@
                 }
 
                 const json = await res.json();
-                if (!json.success) { throw new Error(json.message || 'Falha ao atualizar.'); }
+                const ok = pick(json,'success','Success'); const msg = pick(json,'message','Message') || '';
+                if (!ok) { throw new Error(msg || 'Falha ao atualizar.'); }
 
                 showToast({
                   title: 'Sucesso',
@@ -786,21 +812,22 @@
 
           // Sucesso em JSON (se o controller devolver JSON)
             if (ct.includes("application/json")) {
-                if (data && data.success) {
+                const ok = pick(data, 'success','Success'); const msg = pick(data,'message','Message') || ''; const errors = pick(data,'errors','Errors');
+                if (ok) {
                     bootstrap.Modal.getInstance($("#formModal")[0]).hide();
                     (window.dataTable || $("#tblSistemas").DataTable()).ajax.reload(null, false);
-                    window.showToast?.({ title: "Sucesso", message: data.message || "Registro salvo.", variant: "success" });
+                    window.showToast?.({ title: "Sucesso", message: msg || "Registro salvo.", variant: "success" });
                 } else {
                     // Trata erros de validação retornados como JSON
-                    if (data && data.errors) {
+                    if (data && errors) {
                         const $form = $("#formModal form").first();
                         // Limpa mensagens de validação existentes
                         $form.find(".text-danger").text("");
                         $form.find(".input-validation-error").removeClass("input-validation-error");
 
                         // Aplica novas mensagens de validação
-                        for (const key in data.errors) {
-                            const errorMessages = data.errors[key];
+                        for (const key in errors) {
+                            const errorMessages = errors[key];
                             const $field = $form.find(`[name="${key}"]`);
                             if ($field.length) {
                                 $field.addClass("input-validation-error");
@@ -810,9 +837,9 @@
                                 }
                             }
                         }
-                        window.showToast?.({ title: "Atenção", message: data.message || "Verifique os campos destacados.", variant: "warning" });
+                        window.showToast?.({ title: "Atenção", message: msg || "Verifique os campos destacados.", variant: "warning" });
                     } else {
-                        window.showToast?.({ title: "Erro", message: (data && data.message) || "Falha ao salvar.", variant: "danger" });
+                        window.showToast?.({ title: "Erro", message: (data && msg) || "Falha ao salvar.", variant: "danger" });
                     }
                 }
                 return;

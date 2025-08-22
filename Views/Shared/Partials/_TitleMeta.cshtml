@@ -1,4 +1,9 @@
-﻿<meta charset="UTF-8">
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+    var tokens = Xsrf.GetAndStoreTokens(Context);
+}
+
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 @{
     var title = ViewBag.Title != null
@@ -11,6 +16,8 @@
 <meta name="description" content="Inspinia is the #1 best-selling admin dashboard template on WrapBootstrap. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.">
 <meta name="keywords" content="Inspinia, admin dashboard, WrapBootstrap, HTML template, Bootstrap admin, CRM template, CMS template, responsive admin, web app UI, admin theme, best admin template">
 <meta name="author" content="WebAppLayers">
+
+<meta name="request-verification-token" content="@tokens.RequestToken" />
 
 <!-- App favicon -->
 <link rel="shortcut icon" href="~/images/favicon.ico">

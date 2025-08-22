@@ -1,2 +1,21 @@
 ﻿<script src="~/js/vendors.min.js"></script>
 <script src="~/js/app.js"></script>
+
+<script>
+    (function () {
+      var token = document.querySelector('meta[name="request-verification-token"]')?.getAttribute('content');
+      if (!token) return;
+      // jQuery
+      if (window.$ && $.ajaxSetup) {
+        $.ajaxSetup({
+          headers: { 'RequestVerificationToken': token }
+        });
+      }
+      // fetch nativo: wrapper simples
+      window.secureFetch = async function (url, options) {
+        options = options || {};
+        options.headers = Object.assign({}, options.headers, { 'RequestVerificationToken': token });
+        return fetch(url, options);
+      };
+    })();
+</script>
