@@ -371,6 +371,7 @@
 
                     // Exclusão em massa (botão do TopBar)
                     $('#btnExcluirSelecionados').on('click', async function (e) {
+                        alet('');
                         e.preventDefault();
                         await bulkDelete();
                     });

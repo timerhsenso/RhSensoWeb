@@ -1,12 +1,22 @@
 ﻿@{
 
-/*    ViewBag.Areas = "SEG";
+/*  
+    ViewBag.Areas = "SEG";
     ViewBag.Views = "Tsistema";
-    ViewBag.Controller = "";
+    ViewBag.Controller = "Tsistema";
+    //
+    ViewBag.Icon = "monitor-smartphone"; // ícone padrão
+    ViewBag.Title = "Tabela de Sistemas";
+    ViewBag.SubTitle = "Segurança";
+    //
     ViewBag.HabilitaBtnNovo = true;
     ViewBag.HabilitaBtnExportar = true;
-    ViewBag.HabilitaBtnMostraCamposAdicionais = true; */
-    
+    // Layout
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    ViewBag.HabilitaBtnMostraCamposAdicionais = true; 
+  */
+   
 
     // 1) Área: ViewBag.Areas -> rota -> ""
     var area = (ViewBag.Areas as string)
@@ -94,7 +104,7 @@
 
                             <li>
                                 <a class="dropdown-item text-danger" href="#"
-                                   onclick="DT.bulkDelete({ tableId: 'tblSistemas', deleteBaseUrl: '@Url.Action("Delete", "Tsistema", new { area = "SEG" })', method: 'POST' }); return false;">
+                                   onclick="DT.bulkDelete({ tableId: 'tblSistemas', deleteBaseUrl: '@Url.Action("Delete", controller, new { area = area })', method: 'POST' }); return false;">
                                     <i class="fa fa-trash me-2"></i>Excluir selecionados
                                 </a>
                             </li>

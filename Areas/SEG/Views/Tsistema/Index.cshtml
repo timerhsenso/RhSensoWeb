@@ -2,13 +2,19 @@
     ViewBag.Areas = "SEG";
     ViewBag.Views = "Tsistema";
     ViewBag.Controller = "Tsistema";
-    ViewBag.HabilitaBtnNovo = true;
-    ViewBag.HabilitaBtnExportar = true;
     //
+    ViewBag.Icon = "monitor-smartphone"; // ícone padrão
     ViewBag.Title = "Tabela de Sistemas";
     ViewBag.SubTitle = "Segurança";
+    //
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+    // Layout 
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+
 }
+
 
 @section styles {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
@@ -148,8 +154,8 @@
 
         /* ===== ColReorder (remover se não usar) ===== */
         /* .dt-colreorder-marker {
-                    background: #3a3f52; border: 1px dashed #5c6178; box-shadow: 0 0 10px rgba(0,0,0,.5);
-                } */
+                            background: #3a3f52; border: 1px dashed #5c6178; box-shadow: 0 0 10px rgba(0,0,0,.5);
+                        } */
     </style>
 
     <style>
@@ -216,7 +222,8 @@
 <!-- ============== MODAL DE FORMULÁRIO ============ -->
 <!-- =============================================== -->
 <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+             <div class="modal-dialog modal-sm modal-dialog-centered modal-dialog-scrollable">
+
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Carregando...</h5>
@@ -247,6 +254,9 @@
     <script src="https://cdn.jsdelivr.net/npm/colresizable@1.6/colResizable-1.6.min.js"></script>
 
     <script src="~/js/confirm-modal.js" asp-append-version="true" defer></script>
+
+    <script src="~/js/bulkDelete.js" asp-append-version="true" defer></script>
+
 
     <script>
         (function () {
@@ -666,19 +676,38 @@
               headers: { 'X-Requested-With': 'XMLHttpRequest' },
               data: { modal: 1 }
             })
-            .done(function (html) {
-              $body.html(html);
-              // reativa validação unobtrusive no form carregado
-              if ($.validator && $.validator.unobtrusive) {
-                $.validator.unobtrusive.parse($body.find('form'));
-              }
-            })
+        .done(function (html) {
+          $body.html(html);
+
+          // ✅ pegue o <form> renderizado
+          const $form = $body.find('form');
+
+          // reativa validação unobtrusive
+          if ($.validator && $.validator.unobtrusive) {
+            $.validator.unobtrusive.parse($form);
+          }
+
+          // ✅ adiciona regras com trim apenas se o plugin está disponível
+          if ($.fn.validate) {
+            $form.find('[name="Cdsistema"], [name="Dcsistema"]').each(function () {
+              $(this).rules('add', {
+                required: true,
+                // normalizer: aplica TRIM antes de validar
+                normalizer: function (value) { return (value || '').trim(); },
+                messages: {
+                  required: $(this).data('valRequired') || 'Campo obrigatório.'
+                }
+              });
+            });
+          }
+        })
+
             .fail(function (xhr) {
               const msg = xhr.status ? `Erro ao carregar formulário (HTTP ${xhr.status})` : 'Erro ao carregar formulário';
               $body.html(`<div class="p-4 text-danger"><i class="fa fa-exclamation-triangle me-2"></i>${msg}</div>`);
             });
           }
-
+          
           /* ---------- intercepta "Novo" ---------- */
           $(document).on('click', '#BtnCreateNew, #btnNovo, .btn-novo, a[href$="/SEG/Tsistema/Create"]', function (e) {
             e.preventDefault(); e.stopPropagation();
@@ -687,6 +716,12 @@
             if (!url.includes('modal=1')) url += (url.includes('?')?'&':'?') + 'modal=1';
 
             openFormModal(url, 'Novo Sistema');
+
+            $('#formModal').on('shown.bs.modal', function () { 
+                $('[name="Cdsistema"]:visible:enabled').first().trigger('focus').select(); 
+                $('input[type="checkbox"][name="Ativo"]').prop('checked', true).trigger('change');
+            });
+
           });
 
           /* ---------- intercepta "Editar" (botão da grid) ---------- */
@@ -698,10 +733,13 @@
 
             const url = '@Url.Action("Edit", "Tsistema", new { area = "SEG" })' + '/' + encodeURIComponent(id) + '?modal=1';
             openFormModal(url, 'Editar Sistema');
+
+            $('#formModal').on('shown.bs.modal', function () { $('[name="Dcsistema"]:visible:enabled').first().trigger('focus').select(); });
           });
 
           /* ---------- clique em "Salvar" -> envia submit do form ---------- */
           $(document).on('click', '#modalSave', function (e) {
+              //
             e.preventDefault();
             const $form = $('#formModal form').first();
             if ($form.length) $form.trigger('submit');
@@ -718,12 +756,18 @@
             const $btn = $('#modalSave');
 
             // validação client-side
+
             if (form.reportValidity && !form.reportValidity()) return;
             if ($.validator) {
               const v = $form.validate();
               if (!v.form()) return;
             }
 
+             $form
+            .find('input[type="text"], input[type="search"], input[type="email"], input[type="tel"], input[type="url"], input:not([type]), textarea')
+            .not('[name="__RequestVerificationToken"]')
+            .each(function(){ this.value = (this.value || '').trim(); });
+                
             // feedback
             const prev = $btn.html();
             $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Salvando...');
@@ -741,16 +785,38 @@
           const ct = (xhr.getResponseHeader('Content-Type') || '').toLowerCase();
 
           // Sucesso em JSON (se o controller devolver JSON)
-          if (ct.includes('application/json')) {
-            if (data && data.success) {
-              bootstrap.Modal.getInstance($('#formModal')[0]).hide();
-              (window.dataTable || $('#tblSistemas').DataTable()).ajax.reload(null, false);
-              window.showToast?.({ title:'Sucesso', message: data.message || 'Registro salvo.', variant:'success' });
-            } else {
-              window.showToast?.({ title:'Erro', message: (data && data.message) || 'Falha ao salvar.', variant:'danger' });
+            if (ct.includes("application/json")) {
+                if (data && data.success) {
+                    bootstrap.Modal.getInstance($("#formModal")[0]).hide();
+                    (window.dataTable || $("#tblSistemas").DataTable()).ajax.reload(null, false);
+                    window.showToast?.({ title: "Sucesso", message: data.message || "Registro salvo.", variant: "success" });
+                } else {
+                    // Trata erros de validação retornados como JSON
+                    if (data && data.errors) {
+                        const $form = $("#formModal form").first();
+                        // Limpa mensagens de validação existentes
+                        $form.find(".text-danger").text("");
+                        $form.find(".input-validation-error").removeClass("input-validation-error");
+
+                        // Aplica novas mensagens de validação
+                        for (const key in data.errors) {
+                            const errorMessages = data.errors[key];
+                            const $field = $form.find(`[name="${key}"]`);
+                            if ($field.length) {
+                                $field.addClass("input-validation-error");
+                                const $validationSpan = $form.find(`[data-valmsg-for="${key}"]`);
+                                if ($validationSpan.length) {
+                                    $validationSpan.text(errorMessages.join(" "));
+                                }
+                            }
+                        }
+                        window.showToast?.({ title: "Atenção", message: data.message || "Verifique os campos destacados.", variant: "warning" });
+                    } else {
+                        window.showToast?.({ title: "Erro", message: (data && data.message) || "Falha ao salvar.", variant: "danger" });
+                    }
+                }
+                return;
             }
-            return;
-          }
 
           // HTML → distinguir form (erro) de redirect/página (sucesso)
           if (ct.includes('text/html')) {

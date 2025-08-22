@@ -12,6 +12,7 @@
         string.Equals(req?.Headers["X-Requested-With"].ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
     if (isModal) { Layout = null; } /* em modal não usamos o layout */
+
 }
 
 @if (isModal)

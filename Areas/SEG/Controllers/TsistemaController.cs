@@ -233,7 +233,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Cdsistema,Dcsistema,Ativo")] Tsistema sistema)
         {
-            if (!ModelState.IsValid) return View(sistema);
+            if (!ModelState.IsValid) return Json(new { success = false, message = "Verifique os campos destacados.", errors = ModelState.ToDictionary(m => m.Key, m => m.Value.Errors.Select(e => e.ErrorMessage).ToArray()) });
 
             try
             {
@@ -244,20 +244,18 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 if (existente != null)
                 {
                     ModelState.AddModelError("Cdsistema", "Já existe um sistema com este código.");
-                    return View(sistema);
+                    return Json(new { success = false, message = "Já existe um sistema com este código.", errors = ModelState.ToDictionary(m => m.Key, m => m.Value.Errors.Select(e => e.ErrorMessage).ToArray()) });
                 }
 
                 _context.Add(sistema);
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = "Sistema criado com sucesso!";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = "Sistema criado com sucesso!" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao criar sistema {Id}", sistema.Cdsistema);
-                ModelState.AddModelError("", "Erro ao salvar o sistema. Tente novamente.");
-                return View(sistema);
+                return Json(new { success = false, message = "Erro ao salvar o sistema. Tente novamente." });
             }
         }
 
@@ -278,14 +276,13 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         {
             if (id != sistema.Cdsistema) return NotFound();
 
-            if (!ModelState.IsValid) return View(sistema);
+            if (!ModelState.IsValid) return Json(new { success = false, message = "Verifique os campos destacados.", errors = ModelState.ToDictionary(m => m.Key, m => m.Value.Errors.Select(e => e.ErrorMessage).ToArray()) });
 
             try
             {
                 _context.Update(sistema);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Sistema atualizado com sucesso!";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = "Sistema atualizado com sucesso!" });
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -293,14 +290,12 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     return NotFound();
 
                 _logger.LogError(ex, "Erro de concorrência ao editar sistema {Id}", id);
-                ModelState.AddModelError("", "O registro foi modificado por outro usuário. Recarregue a página.");
-                return View(sistema);
+                return Json(new { success = false, message = "O registro foi modificado por outro usuário. Recarregue a página." });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Erro ao editar sistema {Id}", id);
-                ModelState.AddModelError("", "Erro ao salvar as alterações. Tente novamente.");
-                return View(sistema);
+                return Json(new { success = false, message = "Erro ao salvar as alterações. Tente novamente." });
             }
         }
 

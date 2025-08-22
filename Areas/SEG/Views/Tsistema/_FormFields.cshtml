@@ -6,19 +6,46 @@
 
 <div class="mb-3">
     <label asp-for="Cdsistema" class="form-label"></label>
-    <!-- ✅ atributo nomeado; quando true o Razor renderiza readonly="readonly"; quando false remove -->
-    <input asp-for="Cdsistema" class="form-control" readonly="@isEdit" />
-    @* Mantém a PK no POST mesmo em modo somente leitura *@
-    @if (isEdit)
+
+    @* PK: readonly no Edit, foco no Create *@
+    @if (!isEdit)
     {
+        <input asp-for="Cdsistema"
+               class="form-control"
+               autocomplete="off"
+               autofocus />
+    }
+    else
+    {
+        <input asp-for="Cdsistema"
+               class="form-control"
+               autocomplete="off"
+               readonly />
+        @* Mantém a PK no POST mesmo em modo somente leitura *@
         <input type="hidden" asp-for="Cdsistema" />
     }
+
     <span asp-validation-for="Cdsistema" class="text-danger"></span>
 </div>
 
 <div class="mb-3">
     <label asp-for="Dcsistema" class="form-label"></label>
-    <input asp-for="Dcsistema" class="form-control" />
+
+    @* Foco no 2º campo quando for Edit *@
+    @if (isEdit)
+    {
+        <input asp-for="Dcsistema"
+               class="form-control"
+               autocomplete="off"
+               autofocus />
+    }
+    else
+    {
+        <input asp-for="Dcsistema"
+               class="form-control"
+               autocomplete="off" />
+    }
+
     <span asp-validation-for="Dcsistema" class="text-danger"></span>
 </div>
 
