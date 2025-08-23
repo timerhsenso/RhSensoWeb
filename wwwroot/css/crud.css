@@ -1,0 +1,5 @@
+/* estilos leves para CRUD */
+.form-label { font-weight: 600; }
+.table td, .table th { vertical-align: middle; }
+.modal .modal-body { padding: 1rem; }
+.toast-container { z-index: 2000; }

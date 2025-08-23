@@ -4,6 +4,8 @@
     var cookies = Context.Request.Cookies.ToList();
 }
 
+<h2>passei aqui 001</h2>
+
 <div class="container mt-5">
     <h1 class="mb-4">Bem-vindo!</h1>
 
@@ -45,7 +47,7 @@
     {
         <p><em>Nenhuma sessão registrada.</em></p>
     }
-
+    
     <hr />
     <h2>Cookies</h2>
     @if (cookies.Count > 0)
@@ -113,3 +115,26 @@
     }
 
 </div>
+
+
+@section scripts {
+
+
+
+                (async () => {
+  try {
+    const res = await (window.secureFetch ? secureFetch("/SEG/Tsistema/GetData") : fetch("/SEG/Tsistema/GetData", { credentials: "same-origin" }));
+    const data = await res.json().catch(() => ({}));
+    console.log("GET /SEG/Tsistema/GetData →", data);
+
+    const rows = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+    const hasKeys = rows.length ? Object.keys(rows[0]) : [];
+    console.table({ rows: rows.length, keys: hasKeys.join(", ") });
+
+    if (!rows.length) console.warn("A resposta veio vazia. Verifique se há dados no banco ou se a consulta está ok.");
+  } catch (e) {
+    console.error("Falha ao consultar GetData:", e);
+  }
+})();
+
+    }

@@ -8,10 +8,14 @@
 <html lang="en" class="@html_class" @html_attributes>
 
 <head>
+    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_TitleMeta.cshtml") debugar,  remover em produção //-->
     @await Html.PartialAsync("~/Views/Shared/Partials/_TitleMeta.cshtml")
-    @RenderSection("Styles", false)
-    @await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml")
 
+    <!-- // @@RenderSection("Styles", false) // debugar,  remover em produção //-->
+    @RenderSection("Styles", false)
+
+    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml") // debugar,  remover em produção //-->
+    @await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml")
 
     <style>
         /* Remove só nesta página */
@@ -23,32 +27,39 @@
 </head>
 
 <body>
+
     <div class="wrapper">
 
-
+        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_TopBar.cshtml") // debugar,  remover em produção //-->
         @await Html.PartialAsync("~/Views/Shared/Partials/_TopBar.cshtml")
-        @await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml")
 
+        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml") // debugar,  remover em produção //-->
+        @await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml")
 
         <div class="content-page">
             
+            <!-- // @@RenderBody() // debugar,  remover em produção //-->
             @RenderBody()
 
+            <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
             @await Html.PartialAsync("~/Views/Shared/Partials/_Footer.cshtml")
 
         </div>
 
+        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
         @await Html.PartialAsync("~/Views/Shared/Partials/_ConfirmModal.cshtml")
-
 
     </div>
 
+    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
     @await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml")
+
+    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml") // debugar,  remover em produção //-->
     @await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml")
 
-
+    <!-- // @@RenderSection("Scripts", required: false) // debugar,  remover em produção //-->
     @RenderSection("Scripts", required: false)
-    
 
 </body>
+
 </html>

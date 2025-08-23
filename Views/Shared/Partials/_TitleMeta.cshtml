@@ -5,19 +5,39 @@
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
 @{
     var title = ViewBag.Title != null
     ? ViewBag.Title + " | RhSensoWEB - Responsive Bootstrap 5 Admin Dashboard"
     : "RhSensoWEB - Responsive Bootstrap 5 Admin Dashboard";
 }
-<title>@title</title>
 
+<title>@title</title>
 
 <meta name="description" content="Inspinia is the #1 best-selling admin dashboard template on WrapBootstrap. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.">
 <meta name="keywords" content="Inspinia, admin dashboard, WrapBootstrap, HTML template, Bootstrap admin, CRM template, CMS template, responsive admin, web app UI, admin theme, best admin template">
 <meta name="author" content="WebAppLayers">
 
+@* Anti-CSRF:
+   - GetAndStoreTokens(Context) grava o cookie token e retorna o RequestToken.
+   - Este <meta> expõe o RequestToken para o front ler e enviar no header
+     "RequestVerificationToken" nas chamadas AJAX (fetch/jQuery).
+   - O filtro AutoValidateAntiforgeryToken valida esse header em POST/PUT/PATCH/DELETE,
+     combinando com o cookie token para mitigar CSRF.
+   - Use apenas para MESMA ORIGEM; formulários normais já usam @Html.AntiForgeryToken().
+*@
 <meta name="request-verification-token" content="@tokens.RequestToken" />
 
+<link href="/css/crud.css" rel="stylesheet" asp-append-version="true" />
+
+<script type="module">
+    import { ensureAjaxSetup } from "/js/core/http.js";
+    ensureAjaxSetup();
+</script>
+
 <!-- App favicon -->
-<link rel="shortcut icon" href="~/images/favicon.ico">
+<link rel="shortcut icon" href="/images/favicon.ico">
+
+
+
