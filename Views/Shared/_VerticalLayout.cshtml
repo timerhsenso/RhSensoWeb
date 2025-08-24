@@ -1,4 +1,8 @@
-﻿<!DOCTYPE html>
+﻿@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+
+@Html.Raw($"<!-- // {Env.EnvironmentName} // -->")
+
+<!DOCTYPE html>
 
 @{
     var html_attributes = ViewBag.HTMLAttributes != null ? ViewBag.HTMLAttributes : "";
@@ -8,21 +12,28 @@
 <html lang="en" class="@html_class" @html_attributes>
 
 <head>
-    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_TitleMeta.cshtml") debugar,  remover em produção //-->
+    
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_TitleMeta.cshtml // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_TitleMeta.cshtml")
 
-    <!-- // @@RenderSection("Styles", false) // debugar,  remover em produção //-->
+
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderSection(Styles, false) // -->") }
     @RenderSection("Styles", false)
 
-    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml") // debugar,  remover em produção //-->
+
+    @if (Env.EnvironmentName == "Development")
+    {
+        @Html.Raw("<!-- // ~/Views/Shared/Partials/_HeadCSS.cshtml // -->")
+    }
     @await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml")
 
+    <!--
     <style>
-        /* Remove só nesta página */
         .breadcrumb-item + .breadcrumb-item::before {
             content: "";
         }
     </style>
+    -->
 
 </head>
 
@@ -30,34 +41,34 @@
 
     <div class="wrapper">
 
-        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_TopBar.cshtml") // debugar,  remover em produção //-->
+        @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_TopBar.cshtml // -->") }
         @await Html.PartialAsync("~/Views/Shared/Partials/_TopBar.cshtml")
 
-        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml") // debugar,  remover em produção //-->
+        @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_SideNav.cshtml // -->") }
         @await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml")
 
         <div class="content-page">
-            
-            <!-- // @@RenderBody() // debugar,  remover em produção //-->
+
+            @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderBody() // -->") }
             @RenderBody()
 
-            <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
+            @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_Footer.cshtml // -->") }
             @await Html.PartialAsync("~/Views/Shared/Partials/_Footer.cshtml")
 
         </div>
 
-        <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
+        @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_ConfirmModal.cshtml // -->") }
         @await Html.PartialAsync("~/Views/Shared/Partials/_ConfirmModal.cshtml")
 
     </div>
 
-    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml") // debugar,  remover em produção //-->
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_Customizer.cshtml // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_Customizer.cshtml")
 
-    <!-- // @@await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml") // debugar,  remover em produção //-->
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_FooterScripts.cshtml // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml")
 
-    <!-- // @@RenderSection("Scripts", required: false) // debugar,  remover em produção //-->
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderSection(Scripts, required: false) // -->") }
     @RenderSection("Scripts", required: false)
 
 </body>

@@ -37,8 +37,22 @@
 
 }
 
-<!-- Topbar Start -->
 
+@* Export dropdown 
+BtnCreateNew
+*@
+
+
+@foreach (var item in ViewData)
+{
+      
+  //  <div>
+    //    <strong>@item.Key</strong>: @item.Value
+//    </div>
+}
+
+
+<!-- Topbar Start -->
 <div class="row mb-2">
         <div class="col-lg-12">
             <form class="bg-light-subtle rounded border p-2">
@@ -52,11 +66,11 @@
                         <!---->
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa fa-search"></i></span>
-                            <input id="tableSearch" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
-                            <button type="button" class="search-clear-btn" id="clearSearch" title="Limpar">
+                            <input id="btnPesquisaDT" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
+                            <button type="button" class="search-clear-btn" id="btnLimpaPesquisa" title="Limpar">
                                 <i class="fa fa-times"></i>
                             </button>
-                        </div>
+                        </div>3
                         <!---->
                     </h3>
 
@@ -65,7 +79,7 @@
                     @* Botão Novo *@
                     @if (habilitabtnovo && !string.IsNullOrWhiteSpace(controller))
                     {
-                        <a id="BtnCreateNew" class="btn btn-info ms-1"
+                        <a id="btnNovoRegistro" class="btn btn-info ms-1"
                            href="@Url.Action("Create", controller, new { area = area })?">
                             <i data-lucide="plus" class="fs-sm me-3"></i> Novo
                         </a>
@@ -81,10 +95,11 @@
                                 <i data-lucide="file-down" class="fs-lg"></i>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" id="exportExcel"><i class="fa fa-file-excel text-success me-2"></i>Excel</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                                <li><a class="dropdown-item" href="#" id="btnExportarExcel"><i class="fa fa-file-excel text-success me-2"></i>Excel</a></li>
+                                <li><a class="dropdown-item" href="#" id="btnExportarCSV"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
+                                <li><a class="dropdown-item" href="#" id="btnGerarPDF"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
+                                <li><a class="dropdown-item" href="#" id="btnImprimir"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                                <li><a class="dropdown-item" href="#" id="btnCopiarGrid"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
                             </ul>
                         </div>
                     }
@@ -102,29 +117,25 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
 
+                            <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Atualizar</a></li>
+
+                            <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Filtros</a></li>
+
                             <li>
-                                <a class="dropdown-item text-danger" href="#"
+                                <a class="dropdown-item text-danger" href="#" id="btnExcluirselecao"
                                    onclick="DT.bulkDelete({ tableId: 'tblSistemas', deleteBaseUrl: '@Url.Action("Delete", controller, new { area = area })', method: 'POST' }); return false;">
                                     <i class="fa fa-trash me-2"></i>Excluir selecionados
                                 </a>
                             </li>
-
-                            <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
-                            <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
-                            <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                            
+                            <hr />
+                            <li><a class="dropdown-item" href="#" id="exportPrint"><i data-lucide="star" class="fs-lg"></i> Adicionar aos Favoritos</a></li>
                         </ul>
                     </div>
 
-                        <!--
-                        <a href="#" class="btn btn-soft-primary btn-icon">
-                            <i data-lucide="star" class="fs-lg"></i>
-                        </a>
-                        -->
                     </div>
                 </div>
             </form>
         </div>
     </div>
-
-
 <!-- Topbar End -->
