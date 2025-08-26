@@ -79,7 +79,8 @@
               dt.ajax.reload(null, false);
             }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
-          DTUtil.bindInputSearch('#btnPesquisaDT', '#gridUsuario' ); // << aqui
+          DTUtil.bindInputSearch('#searchGrid', '#gridUsuario' ); @* linka campo pesquisa com o grid *@
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridUsuario', {  reload: true, resetPaging: true  });
         });
     </script>
 

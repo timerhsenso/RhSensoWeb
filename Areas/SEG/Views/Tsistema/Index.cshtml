@@ -1,5 +1,12 @@
 @{
-    ViewData["Title"] = "Sistemas";
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Constantes";
+    ViewBag.Controller = "Constantes";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+    ViewBag.gridName = "#gridTsistema";
+    ViewBag.Title = "Constantes";
+    ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
@@ -80,6 +87,8 @@
               dt.ajax.reload(null, false);
             }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
+          DTUtil.bindInputSearch('#searchGrid', '#gridTsistema' ); @* linka campo pesquisa com o grid *@
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridTsistema', {  reload: true, resetPaging: true  });
         });
     </script>
 }

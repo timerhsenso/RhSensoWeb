@@ -72,10 +72,10 @@ BtnCreateNew
                         <!---->
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa fa-search"></i></span>
-                            <input id="btnPesquisaDT" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
-                            <button type="button" class="search-clear-btn" id="btnLimpaPesquisa" title="Limpar">
-                                <i class="fa fa-times"></i>
-                            </button>
+                        <input id="searchGrid" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnLimpaPesquisa" title="Limpar">
+                            <i class="fa fa-times"></i>
+                        </button>
                         </div>
                         <!---->
                     </h3>
@@ -149,16 +149,22 @@ BtnCreateNew
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
 
-                            <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Atualizar</a></li>
+                            <li>
+                                <a href="#" class="dropdown-item" data-dt-refresh="@gridName">
+                                    <i class="fa-solid fa-rotate-right me-2"></i> Atualizar
+                                </a>
+                            </li>
+
 
                             <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Filtros</a></li>
 
                             <li>
-                                <a class="dropdown-item text-danger" href="#" id="btnExcluirselecao"
-                                   onclick="DT.bulkDelete({ tableId: 'tblSistemas', deleteBaseUrl: '@Url.Action("Delete", controller, new { area = area })', method: 'POST' }); return false;">
+                                <a href="#" class="dropdown-item text-danger"
+                                   data-bulk="delete"
+                                   data-target="@gridName">
                                     <i class="fa fa-trash me-2"></i>Excluir selecionados
                                 </a>
-                            </li>
+                            </li>>
                             
                             <hr />
                             <li><a class="dropdown-item" href="#" id="exportPrint"><i data-lucide="star" class="fs-lg"></i> Adicionar aos Favoritos</a></li>
