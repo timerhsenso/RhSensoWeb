@@ -78,7 +78,9 @@ namespace RhSensoWeb
                         // FIX: alinhar rotas com a área SEG (você usa /SEG/Account/...)
                         options.LoginPath = "/SEG/Account/Login";
                         options.LogoutPath = "/SEG/Account/Logout";
-                        options.AccessDeniedPath = "/SEG/Account/AccessDenied";
+                        //options.AccessDeniedPath = "/Account/AccessDenied";
+                        options.AccessDeniedPath = "/Error/Error403";
+
 
                         options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // mantido
                         options.SlidingExpiration = true;

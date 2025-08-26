@@ -1332,3 +1332,53 @@ menuObserver.observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-sidenav-size"],
 });
+
+// Handler global para qualquer botão/anchor com data-action="create"
+(function () {
+    $(document).on('click', '[data-action="btnNewRegistration"]', function (e) {
+        e.preventDefault();
+
+        const $btn = $(this);
+
+        // Preferências vindas do botão/partial
+        const context = $btn.data('context');          // nome cadastrado no DTUtil
+        const tableSel = $btn.data('table');            // seletor do DataTable
+        const title = $btn.data('title') || 'Novo';
+        const useModalAttr = $btn.data('useModal');
+        // true por padrão, a menos que o atributo seja "false"
+        const wantsModal = (useModalAttr === undefined ? true : String(useModalAttr) !== 'false');
+
+        // Metadados do DTUtil (se a página usou DTUtil.createAjaxDataTable)
+        const meta = (window.DTUtil && DTUtil.meta && context) ? DTUtil.meta(context) : null;
+
+        // Endpoints de Create: data-attrs > DTUtil.meta > href
+        let getUrl = $btn.data('createGet') || meta?.routes?.createGet || $btn.attr('href') || '';
+        let postUrl = $btn.data('createPost') || meta?.routes?.createPost || getUrl;
+
+        // Instância do DataTable (se houver)
+        const dt = tableSel ? $(tableSel).DataTable() : null;
+
+        // Se não for modal (ou não existe AppModal), navega normalmente
+        const canUseModal = wantsModal && window.AppModal && typeof AppModal.form === 'function';
+        if (!canUseModal || !getUrl) {
+            if (getUrl) window.location.assign(getUrl);
+            return;
+        }
+
+        // Abre o Create dentro do modal compartilhado
+        AppModal.form({
+            title,
+            getUrl,
+            postUrl,
+            onSuccess: function () {
+                if (dt) dt.ajax.reload(null, false); // recarrega grid sem resetar paginação
+                else location.reload();              // fallback se não houver grid
+                window.AppNotifier && AppNotifier.success('Criado com sucesso.');
+            },
+            onError: function (xhr) {
+                window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao salvar.');
+            }
+        });
+    });
+})();
+

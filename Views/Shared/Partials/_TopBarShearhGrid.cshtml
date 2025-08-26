@@ -1,6 +1,7 @@
 ﻿@{
 
-/*  
+
+    /*  
     ViewBag.Areas = "SEG";
     ViewBag.Views = "Tsistema";
     ViewBag.Controller = "Tsistema";
@@ -15,14 +16,12 @@
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 
     ViewBag.HabilitaBtnMostraCamposAdicionais = true; 
-  */
+    */
 
-    // 1) Nome do grid
-    var gridName = ViewBag.gridName is string s && !string.IsNullOrWhiteSpace(s)
-    ? s
-    : "#tblDefault";
+        // 1) Nome do grid
+        var gridName = ViewBag.gridName is string s && !string.IsNullOrWhiteSpace(s) ? s : "#tblDefault";
 
-    
+
     // 1) Área: ViewBag.Areas -> rota -> ""
     var area = (ViewBag.Areas as string)
                ?? (ViewContext.RouteData.Values["area"] as string)
@@ -40,23 +39,35 @@
     var showExport = (ViewBag.HabilitaBtnExportar as bool?) ?? true;
     var showcolumns = (ViewBag.HabilitaBtnMostraCamposAdicionais as bool?) ?? true;
 
+
+
+    <!---->
+    var aHref = ViewBag.aHref;
+    var dataAction = ViewBag.dataAction;
+    
+    var dataContext = ViewBag.dataContext;
+
+    <!-- o mesmo context usado no DTUtil.createAjaxDataTable -->
+    var dataTable = ViewBag.dataTable;
+
+    <!-- seletor do seu DataTable para dar reload após salvar -->
+    var dataUseModal = (ViewBag.dataUseModal as bool?) ?? false; 
+
+    <!-- abre no modal -->
+    var dataTitle = ViewBag.dataTitle;
+
+    <!-- título do modal (opcional) -->
+    var dataCreatePost = ViewBag.dataCreatePost;
+
 }
-
-
-
-@* Export dropdown 
-BtnCreateNew
-*@
-
 
 @foreach (var item in ViewData)
 {
       
-  //  <div>
-    //    <strong>@item.Key</strong>: @item.Value
-//    </div>
+ // <div>
+ //   <strong>@item.Key</strong>: @item.Value
+ //  </div>
 }
-
 
 <!-- Topbar Start -->
 <div class="row mb-2">
@@ -81,17 +92,24 @@ BtnCreateNew
                     </h3>
 
                     <div class="d-flex gap-1">
-                        <!---->
+                        
                     @* Botão Novo *@
-                    @if (habilitabtnovo && !string.IsNullOrWhiteSpace(controller))
-                    {
-                        <a id="btnNovoRegistro" class="btn btn-info ms-1"
-                           href="@Url.Action("Create", controller, new { area = area })?">
-                            <i data-lucide="plus" class="fs-sm me-3"></i> Novo
-                        </a>
-                    }
-
                         <!---->
+                    @if (habilitabtnovo) {
+                            <a class="btn btn-info ms-1"
+                            href="@aHref"
+                            data-action="btnNewRegistration" @* <!-- Fixo, não mudar --> *@
+                       data-context="@dataContext" @*  <!-- o mesmo context usado no DTUtil.createAjaxDataTable -->*@
+                       data-table="@dataTable" @*   <!-- seletor do seu DataTable para dar reload após salvar -->*@
+                       data-use-modal="@dataUseModal" @*        <!-- abre no modal -->*@
+                       data-title="@dataTitle" @*  <!-- título do modal (opcional) -->*@
+                       data-create-post="@dataCreatePost">
+                        @*  <!-- opcional; se diferente, informe aqui -->*@
+                            <i data-lucide="plus" class="fs-sm me-2"></i> Novo
+                            </a>
+                            }
+                        <!---->
+
                     @* Export dropdown *@
                     @if (showExport)
                     {
