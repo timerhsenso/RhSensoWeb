@@ -16,8 +16,13 @@
 
     ViewBag.HabilitaBtnMostraCamposAdicionais = true; 
   */
-   
 
+    // 1) Nome do grid
+    var gridName = ViewBag.gridName is string s && !string.IsNullOrWhiteSpace(s)
+    ? s
+    : "#tblDefault";
+
+    
     // 1) Área: ViewBag.Areas -> rota -> ""
     var area = (ViewBag.Areas as string)
                ?? (ViewContext.RouteData.Values["area"] as string)
@@ -36,6 +41,7 @@
     var showcolumns = (ViewBag.HabilitaBtnMostraCamposAdicionais as bool?) ?? true;
 
 }
+
 
 
 @* Export dropdown 
@@ -97,31 +103,31 @@ BtnCreateNew
 
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="#" data-export="excel" data-target="#gridTsistema">
+                                    <a class="dropdown-item" href="#" data-export="excel" data-target="@gridName">
                                         <i class="fa fa-file-excel text-success me-2"></i>Excel
                                     </a>
                                 </li>
 
                                 <li>
-                                    <a class="dropdown-item" href="#" data-export="csv" data-target="#gridTsistema">
+                                    <a class="dropdown-item" href="#" data-export="csv" data-target="@gridName">
                                         <i class="fa fa-file-csv text-info me-2"></i>CSV
                                     </a>
                                 </li>
 
                                 <li>
-                                    <a class="dropdown-item" href="#" data-export="pdf" data-target="#gridTsistema">
+                                    <a class="dropdown-item" href="#" data-export="pdf" data-target="@gridName">
                                         <i class="fa fa-file-pdf text-danger me-2"></i>PDF
                                     </a>
                                 </li>
 
                                 <li>
-                                    <a class="dropdown-item" href="#" data-export="print" data-target="#gridTsistema">
+                                    <a class="dropdown-item" href="#" data-export="print" data-target="@gridName">
                                         <i class="fa fa-print text-secondary me-2"></i>Imprimir
                                     </a>
                                 </li>
 
                                 <li>
-                                    <a class="dropdown-item" href="#" data-export="copiar" data-target="#gridTsistema">
+                                    <a class="dropdown-item" href="#" data-export="copiar" data-target="@gridName">
                                         <i class="fa fa-copy text-secondary me-2"></i>Copiar
                                     </a>
                                 </li>

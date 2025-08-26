@@ -1,18 +1,18 @@
 @{
-    ViewData["Title"] = "Usuários";
+    ViewBag.Areas = "SEG";
+    ViewBag.Views = "Constantes";
+    ViewBag.Controller = "Constantes";
+    ViewBag.HabilitaBtnNovo = true;
+    ViewBag.HabilitaBtnExportar = true;
+    ViewBag.gridName = "#gridUsuario";    
+    ViewBag.Title = "Constantes";
+    ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
-
-<!-- Button Trigger Customizer Offcanvas -->
-<div class="topbar-item d-none d-sm-flex">
-    <button class="topbar-link" data-bs-toggle="offcanvas" data-bs-target="#canvas-show-debug" type="button">
-        <i data-lucide="settings" class="fs-xxl"></i>
-    </button>
-</div>
 
 <div class="card shadow-sm">
     <div class="card-body">
@@ -29,7 +29,7 @@
         $(function () {
           // Criação do DataTable (DTUtil v4). O campo "data" do JSON de GetData deve conter a lista.
           DTUtil.createAjaxDataTable({
-            table: '#gridUsuario',
+            table: '@ViewBag.gridName',
             context: 'Usuario',
             useModal: true,             // tenta editar em modal; cai em fallback se AppModal não existir
             rowId: 'cdusuario',         // nome do campo ID que vem no JSON
