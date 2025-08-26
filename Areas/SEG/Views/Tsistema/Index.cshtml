@@ -10,18 +10,9 @@
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
-
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
-
-
-<!-- Button Trigger Customizer Offcanvas -->
-<div class="topbar-item d-none d-sm-flex">
-    <button class="topbar-link" data-bs-toggle="offcanvas" data-bs-target="#canvas-show-debug" type="button">
-        <i data-lucide="settings" class="fs-xxl"></i>
-    </button>
-</div>
 
 <div class="card shadow-sm">
      <div class="card-body">
@@ -41,8 +32,8 @@
             table: '#gridTsistema',
             context: 'Tsistema',
             useModal: true,             // tenta editar em modal; cai em fallback se AppModal não existir
-            rowId: 'cdsistema',         // nome do campo ID que vem no JSON
-            tokenField: 'token',        // nome do campo de token para exclusão segura
+            rowId: 'Cdsistema',         // nome do campo ID que vem no JSON
+            tokenField: 'deleteToken',        // nome do campo de token para exclusão segura
             exportName: 'Sistemas',     // título nos arquivos exportados
 
             routes: {
@@ -57,9 +48,9 @@
 
             // Colunas centrais (a 1ª é checkbox e a última são ações — geradas automaticamente pelo DTUtil)
             fields: [
-              { data: 'cdsistema', title: 'Código', width: '120px' },
-              { data: 'dcsistema', title: 'Descrição' },
-              { type: 'toggle', data: 'ativo', title: 'Ativo' } // envia POST x-www-form-urlencoded para UpdateAtivo
+              { data: 'Cdsistema', title: 'Código', width: '120px' },
+              { data: 'Dcsistema', title: 'Descrição' },
+              { type: 'toggle', data: 'Ativo', title: 'Ativo' } // envia POST x-www-form-urlencoded para UpdateAtivo
             ],
 
             // Ações dinâmicas (podem ser estendidas sem editar o JS)
@@ -87,6 +78,12 @@
               dt.ajax.reload(null, false);
             }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
+
+          // (Opcional) Handler específico para delete — os fallbacks já funcionam sem isto
+          DTUtil.actions.on('Tsistema', 'detail', async ({ id, meta, dt, button }) => {
+              alert('detail ' + id);
+          });
+
           DTUtil.bindInputSearch('#searchGrid', '#gridTsistema' ); @* linka campo pesquisa com o grid *@
           DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridTsistema', {  reload: true, resetPaging: true  });
         });

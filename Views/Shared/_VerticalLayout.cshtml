@@ -66,11 +66,8 @@
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_ShowDebug.cshtml  Debug // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_ShowDebug.cshtml")
 
-    
     @await Html.PartialAsync("~/Views/Shared/Partials/_FormModal.cshtml")
-    
-    @await Html.PartialAsync("~/Views/Shared/Partials/_ConfirmModal.cshtml")
-    
+        
     @await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
 
 

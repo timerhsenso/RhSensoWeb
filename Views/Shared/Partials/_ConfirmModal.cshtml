@@ -1,24 +1,27 @@
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmModalLabel">Confirmação</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <div class="d-flex align-items-center">
-          <i class="fa-solid fa-triangle-exclamation text-warning fs-1 me-3" aria-hidden="true"></i>
-          <p class="mb-0" id="confirmMessage">Tem certeza?</p>
+<div class="modal fade" id="confirmModal" tabindex="-1"
+     aria-labelledby="confirmModalLabel" aria-hidden="true"
+     data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <!-- 👈 aqui -->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirmação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-warning fs-1 me-3" aria-hidden="true"></i>
+                    <p class="mb-0" id="confirmMessage">Tem certeza?</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">
+                    <i class="fa-solid fa-check me-1"></i>Confirmar
+                </button>
+            </div>
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fa-solid fa-xmark me-1"></i>Cancelar
-        </button>
-        <button type="button" class="btn btn-danger" id="confirmActionBtn">
-          <i class="fa-solid fa-check me-1"></i>Confirmar
-        </button>
-      </div>
     </div>
-  </div>
 </div>

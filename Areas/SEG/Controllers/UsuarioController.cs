@@ -1,37 +1,38 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Caching.Memory;
+using System.Reflection;
 
-using RhSensoWeb.Data;
-using RhSensoWeb.Models;
-using RhSensoWeb.Filters;              // RequirePermission
-using RhSensoWeb.Services.Security;    // IRowTokenService
+using RhSensoWeb.Models;                 // Tuse1 (modelo de usuário)
+using RhSensoWeb.Filters;                // RequirePermission
+using RhSensoWeb.Services.Security;      // IRowTokenService
+using RhSensoWeb.Areas.SEG.Services;     // IUsuarioService
 
 namespace RhSensoWeb.Areas.SEG.Controllers
 {
     [Area("SEG")]
+    [Authorize]
     public class UsuarioController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IUsuarioService _service;
         private readonly ILogger<UsuarioController> _logger;
         private readonly IRowTokenService _rowToken;
         private readonly IMemoryCache _cache;
 
         public UsuarioController(
-            ApplicationDbContext context,
+            IUsuarioService service,
             ILogger<UsuarioController> logger,
             IRowTokenService rowToken,
             IMemoryCache memoryCache)
         {
-            _context = context;
+            _service = service;
             _logger = logger;
             _rowToken = rowToken;
             _cache = memoryCache;
         }
 
-        // ===== Payload do token =====
+        // ===== Payload do token por linha =====
         public sealed record RowKeys(string Cdusuario);
 
         // GET: /SEG/Usuario
@@ -40,108 +41,92 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public IActionResult Index() => View();
 
         // GET: /SEG/Usuario/GetData
-        // Retorno para DataTables: { data: [...] }
+        // Retorno esperado pelo DataTables: { data: [...] }
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public async Task<IActionResult> GetData()
         {
+            var userId = User?.Identity?.Name ?? "anon";
+            var result = await _service.GetDataAsync(userId);
+            if (!result.Success)
+                return Json(new { data = new List<object>(), error = result.Message });
+
             try
             {
-                var userId = User?.Identity?.Name ?? "anon";
-
-                // Busque os dados necessários para a grid
-                var rows = await _context.Tuse1
-                    .AsNoTracking()
-                    .OrderBy(x => x.Cdusuario)
-                    .Select(x => new
+                // Tentativa tipada (IEnumerable<Tuse1> ou projeção equivalente)
+                if (result.Data is IEnumerable<Tuse1> typed)
+                {
+                    var dataTyped = typed.Select(x => new
                     {
                         cdusuario = x.Cdusuario,
                         dcusuario = x.Dcusuario,
                         email_usuario = x.Email_usuario,
                         tpusuario = x.Tpusuario,
-                        ativo = x.Ativo
-                    })
-                    .ToListAsync();
+                        tipo_desc = (x.Tpusuario?.ToString() == "1") ? "Empregado" : "Terceiro",
+                        ativo = x.Ativo,
+                        token = _rowToken.Protect(
+                            payload: new RowKeys((x.Cdusuario ?? string.Empty).Trim()),
+                            purpose: "Delete",
+                            userId: userId,
+                            ttl: TimeSpan.FromMinutes(10))
+                    });
+                    return Json(new { data = dataTyped });
+                }
 
-                // Anexe o token esperado pelo front (nome do campo "token")
-                var data = rows.Select(r =>
+                // Fallback usando reflexão (caso venha projeção anônima do service)
+                var raw = (result.Data as IEnumerable<object>) ?? Enumerable.Empty<object>();
+                var data = raw.Select(r =>
                 {
-                    var id = (r.cdusuario ?? string.Empty).Trim();
-
-                    var delToken = _rowToken.Protect(
-                        payload: new RowKeys(id),
-                        purpose: "Delete",
-                        userId: userId,
-                        ttl: TimeSpan.FromMinutes(10));
-
-                    // Retorne exatamente o que a view espera
+                    string id = GetString(r, "cdusuario") ?? GetString(r, "Cdusuario") ?? string.Empty;
                     return new
                     {
-                        r.cdusuario,
-                        r.dcusuario,
-                        r.email_usuario,          // << agora existe no JSON
-                        r.tpusuario,
-                        tipo_desc = (r.tpusuario?.ToString() == "1") ? "Empregado" : "Terceiro", // << AQUI
-                        r.ativo,
-                        token = delToken        // << importante para o tokenField: 'token'
+                        cdusuario = id,
+                        dcusuario = GetString(r, "dcusuario") ?? GetString(r, "Dcusuario"),
+                        email_usuario = GetString(r, "email_usuario") ?? GetString(r, "Email_usuario"),
+                        tpusuario = GetString(r, "tpusuario") ?? GetString(r, "Tpusuario"),
+                        tipo_desc = ((GetString(r, "tpusuario") ?? GetString(r, "Tpusuario")) == "1") ? "Empregado" : "Terceiro",
+                        ativo = GetBool(r, "ativo") || GetBool(r, "Ativo"),
+                        token = _rowToken.Protect(
+                            payload: new RowKeys((id ?? string.Empty).Trim()),
+                            purpose: "Delete",
+                            userId: userId,
+                            ttl: TimeSpan.FromMinutes(10))
                     };
                 });
-
                 return Json(new { data });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao carregar dados de usuários");
-                return Json(new { data = new List<object>(), error = "Erro ao carregar dados do servidor" });
+                _logger.LogError(ex, "Erro ao montar retorno do GetData de Usuario.");
+                return Json(new { data = result.Data });
             }
         }
 
         // POST: /SEG/Usuario/UpdateAtivo
-        // Recebe x-www-form-urlencoded: id=...&ativo=true|false
+        // Recebe: x-www-form-urlencoded (id=...&ativo=true|false) ou JSON.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("UpdateAtivoPolicy")]
         [RequirePermission("SEG", "SEG_USUARIOS", "A")]
-        public async Task<IActionResult> UpdateAtivo([Required] string id, bool ativo)
+        public async Task<IActionResult> UpdateAtivo([FromForm] string id, [FromForm] bool ativo)
         {
-            try
+            id = (id ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(id))
+                return Json(new { success = false, message = "ID do usuário é obrigatório." });
+
+            // Anti-double click / cooldown curto
+            var userId = User?.Identity?.Name ?? "anon";
+            var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
+            if (_cache.TryGetValue(cooldownKey, out _))
+                return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
+
+            _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
             {
-                id = (id ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(id))
-                {
-                    _logger.LogWarning("UpdateAtivo com ID vazio/inválido");
-                    return Json(new { success = false, message = "ID do usuário é obrigatório." });
-                }
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
+            });
 
-                // Anti-bounce simples
-                var userId = User?.Identity?.Name ?? "anon";
-                var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
-                if (_cache.TryGetValue(cooldownKey, out _))
-                    return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
-
-                _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
-                });
-
-                var entidade = await _context.Tuse1.FirstOrDefaultAsync(x => x.Cdusuario == id);
-                if (entidade is null)
-                    return Json(new { success = false, message = "Usuário não encontrado." });
-
-                if (entidade.Ativo == ativo)
-                    return Json(new { success = true, message = "Status já estava atualizado." });
-
-                // A propriedade Ativo deve aplicar conversão para Flativ internamente (conforme seu modelo)
-                entidade.Ativo = ativo;
-
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Atualizado com sucesso." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao atualizar status de usuário {Id}", id);
-                return Json(new { success = false, message = "Erro ao atualizar." });
-            }
+            var resp = await _service.UpdateAtivoAsync(id, ativo, userId);
+            return Json(resp);
         }
 
         // GET: /SEG/Usuario/SafeEdit?token=...
@@ -150,20 +135,14 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> SafeEdit([FromQuery] string token)
         {
             var userId = User?.Identity?.Name ?? "anon";
-            var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
-
-            if (purpose != "Edit" || tokenUser != userId)
-                return Forbid();
-
-            var entity = await _context.Tuse1.FindAsync(keys.Cdusuario);
-            if (entity is null) return NotFound();
-
-            return View("Edit", entity);
+            var (resp, entidade) = await _service.GetForSafeEditAsync(token, userId);
+            if (!resp.Success) return Forbid();
+            return View("Edit", entidade!);
         }
 
-        // ==== Exclusão por token (1 a 1) ====
-
-        public sealed class DeleteByTokenDto { public string Token { get; set; } = ""; }
+        // ==== Exclusões via token ====
+        public sealed class DeleteByTokenDto { public string Token { get; set; } = string.Empty; }
+        public sealed class DeleteBatchDto { public List<string> Tokens { get; set; } = new(); }
 
         // POST: /SEG/Usuario/DeleteByToken
         [HttpPost]
@@ -172,38 +151,10 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> DeleteByToken([FromBody] DeleteByTokenDto dto)
         {
             var userId = User?.Identity?.Name ?? "anon";
-            var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(dto.Token);
-
-            if (purpose != "Delete" || tokenUser != userId)
-                return Forbid();
-
-            try
-            {
-                var entity = await _context.Tuse1.FindAsync(keys.Cdusuario);
-                if (entity is null)
-                    return NotFound("Usuário não encontrado.");
-
-                _context.Tuse1.Remove(entity);
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Usuário excluído: {Id}", keys.Cdusuario);
-                return Ok();
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Erro ao excluir usuário {Id}", keys.Cdusuario);
-                return StatusCode(500, "Não é possível excluir: registro em uso.");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro inesperado ao excluir usuário {Id}", keys.Cdusuario);
-                return StatusCode(500, "Erro interno do servidor.");
-            }
+            var resp = await _service.DeleteByTokenAsync(dto.Token, userId);
+            if (!resp.Success) return StatusCode(500, resp);
+            return Ok(new { success = true, message = "Excluído com sucesso." });
         }
-
-        // ==== Exclusão em lote por token (opcional, para bulk delete do grid) ====
-
-        public sealed class DeleteBatchDto { public List<string> Tokens { get; set; } = new(); }
 
         // POST: /SEG/Usuario/DeleteBatch
         [HttpPost]
@@ -221,14 +172,8 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             {
                 try
                 {
-                    var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
-                    if (purpose != "Delete" || tokenUser != userId) { fail++; continue; }
-
-                    var entity = await _context.Tuse1.FindAsync(keys.Cdusuario);
-                    if (entity is null) { fail++; continue; }
-
-                    _context.Tuse1.Remove(entity);
-                    ok++;
+                    var resp = await _service.DeleteByTokenAsync(token, userId);
+                    if (resp.Success) ok++; else fail++;
                 }
                 catch
                 {
@@ -236,44 +181,34 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 }
             }
 
-            if (ok > 0)
-            {
-                try { await _context.SaveChangesAsync(); }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Erro ao confirmar exclusão em lote de usuários");
-                    return StatusCode(500, new { success = false, message = "Erro ao gravar exclusões." });
-                }
-            }
-
             return Ok(new { success = fail == 0, ok, fail });
         }
 
-        // ==== Ações padrão (opcionais para navegação direta) ====
+        // ===== Ações padrão (Create/Edit/Delete tradicionais) =====
 
-        // GET: /SEG/Usuario/Details/{id}
-        [HttpGet]
-        [RequirePermission("SEG", "SEG_USUARIOS", "C")]
-        public async Task<IActionResult> Details(string id)
-        {
-            if (string.IsNullOrWhiteSpace(id)) return NotFound();
-
-            var entity = await _context.Tuse1.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Cdusuario == id);
-
-            if (entity == null) return NotFound();
-            return View(entity);
-        }
-
-        // GET: /SEG/Usuario/Edit/{id}
+        // GET: /SEG/Usuario/Create
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "A")]
-        public async Task<IActionResult> Edit(string id)
+        public IActionResult Create() => View();
+
+        // POST: /SEG/Usuario/Create
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
+        public async Task<IActionResult> Create([Bind("Cdusuario,Dcusuario,Email_usuario,Tpusuario,Ativo")] Tuse1 usuario)
         {
-            if (string.IsNullOrWhiteSpace(id)) return NotFound();
-            var entity = await _context.Tuse1.FindAsync(id);
-            if (entity == null) return NotFound();
-            return View(entity);
+            var resp = await _service.CreateAsync(usuario, ModelState);
+            return Json(resp);
+        }
+
+        // POST: /SEG/Usuario/Edit/{id}
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
+        public async Task<IActionResult> Edit(string id, [Bind("Cdusuario,Dcusuario,Email_usuario,Tpusuario,Ativo")] Tuse1 usuario)
+        {
+            var resp = await _service.EditAsync(id, usuario, ModelState);
+            return Json(resp);
         }
 
         // GET: /SEG/Usuario/Delete/{id}
@@ -282,15 +217,12 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
-
-            var entity = await _context.Tuse1.AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Cdusuario == id);
-
-            if (entity == null) return NotFound();
+            var entity = await _service.GetByIdAsync(id);
+            if (entity is null) return NotFound();
             return View(entity);
         }
 
-        // POST: /SEG/Usuario/Delete (form padrão)
+        // POST: /SEG/Usuario/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
@@ -298,16 +230,14 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         {
             try
             {
-                var entity = await _context.Tuse1.FindAsync(id);
-                if (entity != null)
+                var resp = await _service.DeleteByIdAsync(id);
+                if (resp.Success)
                 {
-                    _context.Tuse1.Remove(entity);
-                    await _context.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Usuário excluído com sucesso!";
                 }
                 else
                 {
-                    TempData["ErrorMessage"] = "Usuário não encontrado.";
+                    TempData["ErrorMessage"] = resp.Message ?? "Usuário não encontrado.";
                 }
             }
             catch (Exception ex)
@@ -324,16 +254,28 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         [RequirePermission("SEG", "SEG_USUARIOS", "C")]
         public async Task<IActionResult> HealthCheck()
         {
-            try
-            {
-                var count = await _context.Tuse1.CountAsync();
-                return Json(new { success = true, message = "Conexão com banco OK", totalUsuarios = count });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro no health check (Usuario)");
-                return Json(new { success = false, message = "Erro na conexão com o banco de dados" });
-            }
+            var resp = await _service.HealthCheckAsync();
+            return Json(resp.Success
+                ? new { success = true, message = resp.Message, totalUsuarios = resp.Data }
+                : new { success = false, message = resp.Message });
+        }
+
+        // ===== Helpers (Reflexão segura) =====
+        private static string? GetString(object obj, string prop)
+        {
+            var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            return p?.GetValue(obj)?.ToString();
+        }
+
+        private static bool GetBool(object obj, string prop)
+        {
+            var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            var v = p?.GetValue(obj);
+            if (v is null) return false;
+            if (v is bool b) return b;
+            if (v is int i) return i != 0;
+            if (bool.TryParse(v?.ToString(), out var parsed)) return parsed;
+            return false;
         }
     }
 }

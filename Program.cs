@@ -75,19 +75,26 @@ namespace RhSensoWeb
                 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                     .AddCookie(options =>
                     {
-                        options.LoginPath = "/Account/Login";
-                        options.LogoutPath = "/Account/Logout";
-                        options.AccessDeniedPath = "/Account/AccessDenied";
-                        options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+                        // FIX: alinhar rotas com a área SEG (você usa /SEG/Account/...)
+                        options.LoginPath = "/SEG/Account/Login";
+                        options.LogoutPath = "/SEG/Account/Logout";
+                        options.AccessDeniedPath = "/SEG/Account/AccessDenied";
+
+                        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // mantido
                         options.SlidingExpiration = true;
                     });
 
                 // =======================
                 // SESSÃO
                 // =======================
+                // ADD: cache distribuído em memória (Session depende de IDistributedCache)
+                builder.Services.AddDistributedMemoryCache();
+
                 builder.Services.AddSession(options =>
                 {
-                    options.IdleTimeout = TimeSpan.FromMinutes(30);
+                    // FIX: sessão muito curta (2 min) causava "quedas" e AccessDenied; aumentamos para 2h
+                    options.IdleTimeout = TimeSpan.FromHours(2);
+                    options.Cookie.Name = ".RhSensoWeb.Session";
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
                 });
@@ -101,7 +108,7 @@ namespace RhSensoWeb
                 // DATA PROTECTION
                 // =======================
                 builder.Services.AddDataProtection();
-                // Em prod/farm: persistir chaves (ex.: FileSystem/Blob/Redis)
+                // Nota: em produção/ambiente com mais de uma instância, considere persistir as chaves (FileSystem/Blob/Redis).
 
                 // =======================
                 // SERVIÇOS DE SEGURANÇA / UTIL
@@ -113,6 +120,8 @@ namespace RhSensoWeb
                 // SEG – Services da área (NEW)
                 // =======================
                 builder.Services.AddScoped<ITsistemaService, TsistemaService>(); // NEW
+
+                builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
                 // =======================
                 // RATE LIMITER
@@ -176,7 +185,7 @@ namespace RhSensoWeb
                 app.UseStaticFiles();
                 app.UseRouting();
 
-                app.UseSession();
+                app.UseSession();          // OK: antes de Authentication/Authorization se você lê Session em filtros
                 app.UseAuthentication();
                 app.UseRateLimiter();
                 app.UseAuthorization();

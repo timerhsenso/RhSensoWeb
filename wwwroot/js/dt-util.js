@@ -1,5 +1,8 @@
 /* dt-util.js — v4 */
 window.DTUtil = (function () {
+    /**
+     * Configura header antifalsificação (RequestVerificationToken) em requests mutáveis.
+     */
     function setupAjaxCsrf(metaSelector = 'meta[name="request-verification-token"]') {
         const token = document.querySelector(metaSelector)?.content || null;
         if (!token) return;
@@ -11,6 +14,9 @@ window.DTUtil = (function () {
         });
     }
 
+    /**
+     * Localização pt-BR para DataTables.
+     */
     function dtLanguage() {
         return {
             decimal: ',', thousands: '.',
@@ -23,16 +29,19 @@ window.DTUtil = (function () {
         };
     }
 
+    /** Escapa HTML básico. */
     function escapeHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
     }
 
+    /** Encontra índice de coluna pelo mData. */
     function findColumnIndexByData(dt, name) {
         const c = dt.settings()[0].aoColumns;
         for (let i = 0; i < c.length; i++) { if (c[i].mData === name) return i; }
         return -1;
     }
 
+    /** Guarda metadados/API no elemento tabela. */
     function storeMeta($t, meta) { $t.data('dt-meta', meta); }
     function storeApi($t, api) { $t.data('dt-api', api); }
     function getApiFromEl(el) { return $(el).closest('table[data-dt-context]').data('dt-api') || null; }
@@ -47,6 +56,25 @@ window.DTUtil = (function () {
         return $from.parents().find('table[data-dt-context]').first();
     }
 
+    /**
+     * Helper de notificação padronizado.
+     * Usa AppNotifier.<level>() se existir, senão cai em alert() + console.
+     * @param {'info'|'warn'|'error'|'success'} level
+     * @param {string} message
+     * @param {'log'|'warn'|'error'} [fallbackConsole='warn']
+     */
+    function notify(level, message, fallbackConsole = 'warn') {
+        if (window.AppNotifier && typeof AppNotifier[level] === 'function') {
+            AppNotifier[level](message);
+        } else {
+            alert(message);
+            if (console && typeof console[fallbackConsole] === 'function') {
+                console[fallbackConsole]('DTUtil:', message);
+            }
+        }
+    }
+
+    /** Renderers úteis para colunas. */
     const renderers = {
         boolBadge: (val) => !!val ? '<span class="badge bg-success">Sim</span>' : '<span class="badge bg-secondary">Não</span>',
         dateBR: (val) => { if (!val) return ''; try { const d = new Date(val); return d.toLocaleDateString('pt-BR'); } catch { return String(val); } },
@@ -89,7 +117,10 @@ window.DTUtil = (function () {
                 if (meta.useModal && window.AppModal?.form && urlGet)
                     return AppModal.form({
                         title: `Editar: ${id}`, getUrl: urlGet, postUrl: urlPost,
-                        onSuccess: () => { dt?.ajax.reload(null, false); window.AppNotifier && AppNotifier.success('Registro atualizado.'); }
+                        onSuccess: () => {
+                            dt?.ajax.reload(null, false);
+                            //window.AppNotifier && AppNotifier.success('Registro atualizado.'); @* comentado para eviar duplicação  *@
+                        }
                     });
                 if (urlGet) return location.href = urlGet;
             }
@@ -112,23 +143,36 @@ window.DTUtil = (function () {
         $(root).on('click', '[data-export]', function () {
             const type = String($(this).data('export') || '').toLowerCase();
             const $t = getNearestTable(this); const dt = $t.data('dt-api');
-            if (!dt) return (window.AppNotifier ? AppNotifier.warn('Grid não encontrado para exportação.') : console.warn('DTUtil: DataTable não encontrado.'));
+            if (!dt) { notify('error', 'Grid não encontrado para exportação.'); return; }
             exportTable(dt, type);
         });
 
-        // exclusão em lote
+        // exclusão em lote (com toasts de erro/aviso)
         $(root).on('click', '[data-bulk="delete"]', async function () {
-            const $t = getNearestTable(this); const dt = $t.data('dt-api'); const meta = $t.data('dt-meta') || {};
-            if (!dt || !meta.routes?.deletePost) return (window.AppNotifier ? AppNotifier.warn('Tabela/rota de exclusão não configurada.') : alert('Tabela/rota de exclusão não configurada.'));
-            const rows = getSelectedRows(dt); if (!rows.length) return (window.AppNotifier ? AppNotifier.info('Nenhum registro selecionado.') : alert('Nenhum registro selecionado.'));
-            const tokenField = meta.tokenField || 'token'; const tokens = rows.map(r => r?.[tokenField]).filter(Boolean);
-            if (!tokens.length) return (window.AppNotifier ? AppNotifier.warn('Nenhum token encontrado nas linhas selecionadas.') : alert('Nenhum token encontrado nas linhas selecionadas.'));
+            const $t = getNearestTable(this);
+            const dt = $t.data('dt-api');
+            const meta = $t.data('dt-meta') || {};
+
+            if (!$t.length || !dt) { notify('error', 'Grid não encontrado para exclusão.'); return; }
+            if (!meta.routes?.deletePost) { notify('warn', 'Rota de exclusão não configurada.'); return; }
+
+            const rows = getSelectedRows(dt);
+            if (!rows.length) { notify('info', 'Nenhum registro selecionado.'); return; }
+
+            const tokenField = meta.tokenField || 'token';
+            const tokens = rows.map(r => r?.[tokenField]).filter(Boolean);
+            if (!tokens.length) { notify('warn', 'Nenhum token encontrado nas linhas selecionadas.'); return; }
+
             const proceed = window.AppModal?.confirm ? await AppModal.confirm(`Excluir ${tokens.length} registro(s)?`) : confirm(`Excluir ${tokens.length} registro(s)?`);
             if (!proceed) return;
 
             if (meta.routes.deleteBatchPost) {
                 $.ajax({ url: meta.routes.deleteBatchPost, type: 'POST', contentType: 'application/json; charset=UTF-8', data: JSON.stringify({ tokens }) })
-                    .done((res) => { dt.ajax.reload(null, false); const msg = res && typeof res.ok === 'number' ? `Exclusão: OK ${res.ok} | Falhas ${res.fail || 0}` : 'Exclusão em lote concluída.'; window.AppNotifier ? AppNotifier.success(msg) : alert(msg); })
+                    .done((res) => {
+                        dt.ajax.reload(null, false);
+                        const msg = res && typeof res.ok === 'number' ? `Exclusão: OK ${res.ok} | Falhas ${res.fail || 0}` : 'Exclusão em lote concluída.';
+                        window.AppNotifier ? AppNotifier.success(msg) : alert(msg);
+                    })
                     .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro no lote.')));
             } else {
                 let ok = 0, fail = 0;
@@ -143,18 +187,27 @@ window.DTUtil = (function () {
         $(root).on('change', '.dt-toggle', function () {
             const $tog = $(this); const $t = $tog.closest('table[data-dt-context]'); const meta = $t.data('dt-meta') || {};
             const id = $tog.data('id'); const ativo = $tog.is(':checked');
-            if (!meta.routes?.updateAtivoPost) { $tog.prop('checked', !ativo); return (window.AppNotifier ? AppNotifier.warn('Rota de atualização de status não configurada.') : alert('Rota de atualização de status não configurada.')); }
+            if (!meta.routes?.updateAtivoPost) {
+                $tog.prop('checked', !ativo);
+                return (window.AppNotifier ? AppNotifier.warn('Rota de atualização de status não configurada.') : alert('Rota de atualização de status não configurada.'));
+            }
             $.ajax({ url: meta.routes.updateAtivoPost, type: 'POST', data: $.param({ id, ativo }), contentType: 'application/x-www-form-urlencoded; charset=UTF-8' })
                 .done(() => window.AppNotifier && AppNotifier.success('Status atualizado.'))
                 .fail(xhr => { $tog.prop('checked', !ativo); (window.AppAjax ? AppAjax.handleError(xhr) : alert('Falha ao atualizar status.')); });
         });
     }
 
+    /**
+     * Retorna dados das linhas marcadas via checkbox .dt-row-select.
+     */
     function getSelectedRows(dt) {
         const out = []; dt.rows().every(function () { const n = this.node(); const $c = $(n).find('.dt-row-select:checkbox'); if ($c.is(':checked')) out.push(this.data()); });
         return out;
     }
 
+    /**
+     * Cria DataTable com colunas padrão e ações delegadas.
+     */
     function createAjaxDataTable(opt) {
         if (!$.fn.DataTable) throw new Error('DataTables não carregado.');
         if (!opt || !opt.table) throw new Error('DTUtil: Parâmetro "table" é obrigatório.');
@@ -239,6 +292,9 @@ window.DTUtil = (function () {
         return dt;
     }
 
+    /**
+     * Dispara export (excel|csv|pdf|copy|print) usando botões do DataTables.
+     */
     function exportTable(dt, tipo) {
         if (!dt || !dt.button) return;
         const map = { excel: '.buttons-excel', pdf: '.buttons-pdf', csv: '.buttons-csv', copiar: '.buttons-copy', copy: '.buttons-copy', print: '.buttons-print' };
@@ -247,6 +303,7 @@ window.DTUtil = (function () {
         else console.warn('Tipo inválido:', tipo);
     }
 
+    /** Visibilidade de coluna. */
     function setColumnVisibility(dt, idxOrName, visible) {
         if (!dt) return;
         let idx = typeof idxOrName === 'number' ? idxOrName : findColumnIndexByData(dt, idxOrName);
@@ -254,6 +311,7 @@ window.DTUtil = (function () {
         dt.column(idx).visible(!!visible);
     }
 
+    /** Atalho para várias colunas por nome. */
     function toggleColumnsByName(dt, names = [], visible) {
         names.forEach(n => setColumnVisibility(dt, n, visible));
     }
@@ -282,15 +340,25 @@ DTUtil.bindInputSearch = function (inputSelector, tableSelector, delayMs = 300) 
     const $input = $(inputSelector);
     const $table = $(tableSelector || $input.attr('data-dt-target'));
 
-    if (!$input.length || !$table.length) {
-        console.warn('DTUtil.bindInputSearch: input ou tabela não encontrado.', { inputSelector, tableSelector });
+    if (!$input.length) {
+        if (window.AppNotifier) AppNotifier.error('Input de busca não encontrado.');
+        else alert('Input de busca não encontrado.');
+        console.warn('DTUtil.bindInputSearch: input não encontrado.', { inputSelector });
+        return;
+    }
+    if (!$table.length) {
+        if (window.AppNotifier) AppNotifier.error('Grid alvo da busca não encontrado.');
+        else alert('Grid alvo da busca não encontrado.');
+        console.warn('DTUtil.bindInputSearch: tabela não encontrada.', { tableSelector });
         return;
     }
 
     // pega a instância (via DTUtil ou DataTables puro)
     const dt = $table.data('dt-api') || ($.fn.dataTable.isDataTable($table) ? $table.DataTable() : null);
     if (!dt) {
-        console.warn('DTUtil.bindInputSearch: DataTable ainda não inicializado.', { tableSelector });
+        if (window.AppNotifier) AppNotifier.error('DataTable ainda não inicializado para busca.');
+        else alert('DataTable ainda não inicializado para busca.');
+        console.warn('DTUtil.bindInputSearch: DataTable não inicializado.', { tableSelector });
         return;
     }
 
@@ -352,7 +420,12 @@ DTUtil.bindClearSearch = function (btnSelector, inputSelectors, tableSelector, o
         // 2) Opera na DataTable com segurança
         const $table = $(tableSelector);
         const dt = $table.data('dt-api') || ($.fn.dataTable.isDataTable($table) ? $table.DataTable() : null);
-        if (!dt) return;
+        if (!dt) {
+            if (window.AppNotifier) AppNotifier.error('Grid não encontrado para limpar a pesquisa.');
+            else alert('Grid não encontrado para limpar a pesquisa.');
+            console.warn('DTUtil.bindClearSearch: DataTable não encontrado.', { tableSelector });
+            return;
+        }
 
         if (opts.clearState && typeof dt.state?.clear === 'function') { try { dt.state.clear(); } catch (_) { } }
 
@@ -389,12 +462,8 @@ DTUtil.refresh = function (tableSelector, options) {
     const dt = $table.data('dt-api') || ($.fn.dataTable.isDataTable($table) ? $table.DataTable() : null);
 
     if (!dt) {
-        // 🔹 Se existir um notifier global, usa ele
-        if (window.AppNotifier) {
-            AppNotifier.error('Grid não encontrado para atualização.');
-        } else {
-            alert('Grid não encontrado para atualização.');
-        }
+        if (window.AppNotifier) { AppNotifier.error('Grid não encontrado para atualização.'); }
+        else { alert('Grid não encontrado para atualização.'); }
         console.warn('DTUtil.refresh: DataTable não encontrado.', { tableSelector });
         return;
     }
@@ -407,10 +476,9 @@ DTUtil.refresh = function (tableSelector, options) {
     }
 };
 
-// Fim do dt-util.js
-
+// Delegate para anchors com atributo data-dt-refresh (plug & play)
 $(document).on('click', '[data-dt-refresh]', function (e) {
     e.preventDefault();
-    const target = $(this).data('dt-refresh');
-    DTUtil.refresh(target || $(this).data('target'));
+    const target = $(this).data('dt-refresh') || $(this).data('target');
+    DTUtil.refresh(target);
 });
