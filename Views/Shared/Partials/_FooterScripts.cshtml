@@ -20,6 +20,17 @@
 <script src="~/js/app-modal.js" asp-append-version="true"></script>
 <script src="~/js/dt-util.js" asp-append-version="true"></script>
 
+<!-- defaults globais do toast -->
+<script>
+    // só roda se o AppNotifier já estiver carregado
+    window.AppNotifier && AppNotifier.config({
+      position: 'top-right',   // top-right | top-left | bottom-right | bottom-left | center
+      template: 'minimal',     // basic | minimal | rich
+      delay: 4000,             // ms
+      autohide: true
+    });
+</script>
+
 @* 5) Bootstrap do DTUtil (CSRF + delegados globais). Seguro mesmo se DTUtil não existir *@
 <script>
     window.DTUtil && DTUtil.setupAjaxCsrf();

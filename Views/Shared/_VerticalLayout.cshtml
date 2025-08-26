@@ -16,10 +16,8 @@
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_TitleMeta.cshtml  Debug // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_TitleMeta.cshtml")
 
-
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderSection(Styles, false)  Debug // -->") }
     @RenderSection("Styles", false)
-
 
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_HeadCSS.cshtml  Debug // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_HeadCSS.cshtml")
@@ -40,7 +38,6 @@
 
         @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_TopBar.cshtml Debug // -->") }
         @await Html.PartialAsync("~/Views/Shared/Partials/_TopBar.cshtml")
-
 
         @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_SideNav.cshtml Debug // -->") }
         @await Html.PartialAsync("~/Views/Shared/Partials/_SideNav.cshtml")
@@ -66,14 +63,10 @@
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_ShowDebug.cshtml  Debug // -->") }
     @await Html.PartialAsync("~/Views/Shared/Partials/_ShowDebug.cshtml")
 
-    @await Html.PartialAsync("~/Views/Shared/Partials/_FormModal.cshtml")
-        
-    @await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
-
-
-    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_FooterScripts.cshtml  Debug // -->") }
-    @await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml")
+    @await Html.PartialAsync("~/Views/Shared/Partials/_FormModal.cshtml")       
     
+    @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // ~/Views/Shared/Partials/_FooterScripts.cshtml  Debug // -->") }
+    @await Html.PartialAsync("~/Views/Shared/Partials/_FooterScripts.cshtml")    
 
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderSection(Scripts, required: false)  Debug // -->") }
     @RenderSection("Scripts", required: false)
