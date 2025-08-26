@@ -70,7 +70,7 @@ BtnCreateNew
                             <button type="button" class="search-clear-btn" id="btnLimpaPesquisa" title="Limpar">
                                 <i class="fa fa-times"></i>
                             </button>
-                        </div>3
+                        </div>
                         <!---->
                     </h3>
 
@@ -94,14 +94,40 @@ BtnCreateNew
                                data-bs-toggle="dropdown" aria-expanded="false" title="Exportar">
                                 <i data-lucide="file-down" class="fs-lg"></i>
                             </a>
+
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" id="btnExportarExcel"><i class="fa fa-file-excel text-success me-2"></i>Excel</a></li>
-                                <li><a class="dropdown-item" href="#" id="btnExportarCSV"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
-                                <li><a class="dropdown-item" href="#" id="btnGerarPDF"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
-                                <li><a class="dropdown-item" href="#" id="btnImprimir"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
-                                <li><a class="dropdown-item" href="#" id="btnCopiarGrid"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" data-export="excel" data-target="#gridTsistema">
+                                        <i class="fa fa-file-excel text-success me-2"></i>Excel
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" data-export="csv" data-target="#gridTsistema">
+                                        <i class="fa fa-file-csv text-info me-2"></i>CSV
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" data-export="pdf" data-target="#gridTsistema">
+                                        <i class="fa fa-file-pdf text-danger me-2"></i>PDF
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" data-export="print" data-target="#gridTsistema">
+                                        <i class="fa fa-print text-secondary me-2"></i>Imprimir
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a class="dropdown-item" href="#" data-export="copiar" data-target="#gridTsistema">
+                                        <i class="fa fa-copy text-secondary me-2"></i>Copiar
+                                    </a>
+                                </li>
                             </ul>
                         </div>
+
                     }
 
                         <!---->
@@ -139,3 +165,7 @@ BtnCreateNew
         </div>
     </div>
 <!-- Topbar End -->
+
+
+
+

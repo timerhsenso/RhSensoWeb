@@ -1,0 +1,475 @@
+# Especificação Técnica Completa: Front-End Genérico para Grid Dinâmica
+
+## 📋 Visão Geral do Projeto
+
+**Título**: Implementação de Front-End Genérico para Grid com DataTables  
+**Objetivo**: Desenvolver uma interface de usuário (UI) de listagem altamente reutilizável e configurável através de JSON. O sistema deve consistir em componentes únicos capazes de gerenciar qualquer entidade (Sistemas, Usuários, Perfis) apenas alterando um objeto de configuração.
+
+**Compatibilidade**: 100% compatível com TsistemaController, priorizando endpoints AJAX (retorno JSON) sobre formulários tradicionais com redirecionamento.
+
+---
+
+## 🛠️ Stack Tecnológica
+
+- **Framework**: ASP.NET Core MVC (.NET 8)
+- **JavaScript**: jQuery 3.7+, DataTables 2.x (extensões: Buttons, Responsive, ColReorder)
+- **UI Framework**: Bootstrap 5
+- **Ícones**: Font Awesome 6
+- **Validação**: jQuery Validation Plugin
+
+---
+
+## 🏗️ Arquitetura e Princípios Fundamentais
+
+### 1. **Configuração Centralizada via JSON**
+- Toda lógica da grid controlada por objeto JSON em `<script id="grid-config" type="application/json">`
+- Zero JavaScript específico por entidade
+- Configuração declarativa completa
+
+### 2. **Segurança Integrada**
+- Token CSRF obrigatório em todas requisições POST via header `X-CSRF-TOKEN`
+- Leitura automática de `<meta name="RequestVerificationToken">`
+- Validação server-side e client-side
+
+### 3. **Componentização Modular**
+- **Topbar**: Título, busca global, ações em massa
+- **Grid**: DataTables configurável
+- **Modais**: Reutilizáveis para formulários e confirmações
+- **Feedback**: Loading states e notificações toast
+
+### 4. **Experiência do Usuário (UX)**
+- Feedback visual para todas operações
+- Estados de carregamento durante AJAX
+- Notificações de sucesso/erro
+- Interface responsiva
+- Acessibilidade (ARIA labels)
+
+---
+
+## 🔄 Mapeamento Completo de Funcionalidades
+
+| Funcionalidade | Endpoint | Método | Implementação |
+|---|---|---|---|
+| **Carregamento Inicial** | `GetData` | GET | DataTable inicializada via AJAX, mapeando `response.data` |
+| **Novo Registro** | `Create` | GET/POST | Botão "Novo" → Modal (se `useModal: true`) ou navegação |
+| **Edição** | `Edit/{id}` | GET/POST | Botão "Editar" → Modal com dados pré-carregados |
+| **Exclusão Segura** | `DeleteByToken` | POST | Modal de confirmação → POST com token |
+| **Exclusão em Massa** | `DeleteBatch` | POST | Checkbox seleção → Confirmação → POST array IDs |
+| **Toggle Status** | `UpdateAtivo` | POST | Switch interativo → POST estado (true/false) |
+| **Exportação** | - | - | Botões DataTables (Excel, PDF, Print, ColVis) |
+
+---
+
+## 📝 Estrutura de Configuração JSON Completa
+
+```json
+{
+  "title": "Sistemas",
+  "subTitle": "Configurações Globais do Sistema",
+  "useModal": true,
+  
+  "routes": {
+    "list": "/SEG/Tsistema/GetData",
+    "createGet": "/SEG/Tsistema/Create",
+    "createPost": "/SEG/Tsistema/Create",
+    "editGet": "/SEG/Tsistema/Edit/{id}",
+    "editPost": "/SEG/Tsistema/Edit/{id}",
+    "deletePost": "/SEG/Tsistema/DeleteByToken",
+    "deleteBatchPost": "/SEG/Tsistema/DeleteBatch",
+    "updateAtivoPost": "/SEG/Tsistema/UpdateAtivo"
+  },
+  
+  "columns": [
+    { 
+      "type": "checkbox", 
+      "width": "30px",
+      "className": "text-center"
+    },
+    { 
+      "data": "cdsistema", 
+      "title": "Código", 
+      "width": "100px",
+      "searchable": true,
+      "orderable": true
+    },
+    { 
+      "data": "dcsistema", 
+      "title": "Descrição",
+      "searchable": true,
+      "orderable": true
+    },
+    { 
+      "data": "ativo", 
+      "title": "Status", 
+      "width": "80px", 
+      "render": { 
+        "type": "booleanToggle",
+        "trueText": "Ativo",
+        "falseText": "Inativo"
+      },
+      "className": "text-center"
+    },
+    {
+      "type": "actions",
+      "title": "Ações",
+      "width": "120px",
+      "orderable": false,
+      "searchable": false,
+      "className": "text-center",
+      "buttons": [
+        { 
+          "type": "edit", 
+          "icon": "fa-solid fa-pencil", 
+          "tooltip": "Editar registro",
+          "class": "btn btn-sm btn-outline-primary"
+        },
+        { 
+          "type": "delete", 
+          "icon": "fa-solid fa-trash", 
+          "tooltip": "Excluir registro",
+          "class": "btn btn-sm btn-outline-danger"
+        }
+      ]
+    }
+  ],
+  
+  "settings": {
+    "rowId": "cdsistema",
+    "deleteTokenField": "token",
+    "language": "pt-BR",
+    "responsive": true,
+    "autoWidth": false,
+    "processing": true,
+    "serverSide": false
+  },
+  
+  "pagination": {
+    "pageLength": 25,
+    "lengthMenu": [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Todos"]]
+  },
+  
+  "search": {
+    "placeholder": "Buscar em todos os campos...",
+    "delay": 500,
+    "minLength": 2
+  },
+  
+  "export": {
+    "excel": true,
+    "pdf": true,
+    "print": true,
+    "colvis": true,
+    "filename": "Sistemas"
+  },
+  
+  "permissions": {
+    "create": true,
+    "edit": true,
+    "delete": true,
+    "deleteBatch": true,
+    "export": true,
+    "toggleStatus": true
+  },
+  
+  "validation": {
+    "clientSide": true,
+    "showErrors": "inline",
+    "rules": {
+      "dcsistema": {
+        "required": true,
+        "minlength": 3,
+        "maxlength": 100
+      }
+    },
+    "messages": {
+      "dcsistema": {
+        "required": "Descrição é obrigatória",
+        "minlength": "Mínimo 3 caracteres",
+        "maxlength": "Máximo 100 caracteres"
+      }
+    }
+  },
+  
+  "callbacks": {
+    "beforeCreate": null,
+    "afterCreate": "reloadGrid",
+    "beforeEdit": null,
+    "afterEdit": "reloadGrid",
+    "beforeDelete": null,
+    "afterDelete": "reloadGrid",
+    "onToggleStatus": "showStatusToast"
+  },
+  
+  "ui": {
+    "theme": "bootstrap5",
+    "fixedHeader": true,
+    "fixedColumns": {
+      "left": 1,
+      "right": 1
+    },
+    "rowHeight": "auto",
+    "stripeClasses": ["odd", "even"]
+  },
+  
+  "messages": {
+    "confirmDelete": "Tem certeza que deseja excluir este registro?",
+    "confirmBatchDelete": "Tem certeza que deseja excluir os {count} registros selecionados?",
+    "noSelection": "Selecione pelo menos um registro",
+    "deleteSuccess": "Registro excluído com sucesso",
+    "deleteError": "Erro ao excluir registro",
+    "updateSuccess": "Registro atualizado com sucesso",
+    "createSuccess": "Registro criado com sucesso"
+  }
+}
+```
+
+---
+
+## 📦 Entregáveis Detalhados
+
+### 1. **Index.cshtml (View Genérica)**
+```html
+@{
+    ViewData["Title"] = "Grid Genérica";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Estrutura do Card Principal -->
+<div class="card">
+    <div class="card-header" id="grid-topbar">
+        <!-- Título, subtítulo e ações serão inseridos dinamicamente -->
+    </div>
+    <div class="card-body">
+        <table id="grid" class="table table-striped table-hover w-100">
+            <!-- Cabeçalho e dados inseridos pelo DataTables -->
+        </table>
+    </div>
+</div>
+
+<!-- Configuração JSON -->
+<script id="grid-config" type="application/json">
+    @Html.Raw(ViewBag.GridConfig ?? "{}")
+</script>
+
+<!-- Inclusão dos Modais -->
+@await Html.PartialAsync("_FormModal")
+@await Html.PartialAsync("_ConfirmModal")
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/crud.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.0/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/3.0.0/css/buttons.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/3.0.0/css/responsive.bootstrap5.min.css">
+}
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/2.0.0/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.0/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/3.0.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.print.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/3.0.0/js/buttons.colVis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="~/js/app-grid.js"></script>
+}
+```
+
+### 2. **app-grid.js (Lógica Principal)**
+**Estrutura Modular Requerida**:
+
+```javascript
+/**
+ * Grid Dinâmica - Sistema Genérico de CRUD
+ * Versão: 2.0
+ * Compatibilidade: jQuery 3.7+, DataTables 2.x, Bootstrap 5
+ */
+
+class GridManager {
+    constructor() {
+        this.config = null;
+        this.table = null;
+        this.csrf = null;
+    }
+    
+    // Métodos principais a implementar:
+    init()                    // Inicialização geral
+    loadConfig()             // Carrega JSON de configuração
+    setupCSRF()              // Configura token CSRF
+    buildTopbar()            // Constrói barra superior
+    initializeDataTable()    // Inicializa DataTables
+    setupEventHandlers()     // Configura eventos
+    renderColumns()          // Renderiza colunas dinamicamente
+    handleBooleanToggle()    // Gerencia toggle de status
+    showFormModal()          // Exibe modal de formulário
+    showConfirmModal()       // Exibe modal de confirmação
+    performAjaxAction()      // Executa ações AJAX
+    showNotification()       // Exibe notificações toast
+    reloadGrid()            // Recarrega dados da grid
+    validateForm()          // Valida formulários
+    executeCallback()       // Executa callbacks customizados
+}
+
+// Inicialização automática
+$(document).ready(() => {
+    window.gridManager = new GridManager();
+    window.gridManager.init();
+});
+```
+
+### 3. **_FormModal.cshtml (Modal de Formulário)**
+```html
+<div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="formModalLabel">Formulário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="formModalBody">
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="saveFormBtn">
+                    <i class="fa-solid fa-save me-1"></i>Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+### 4. **_ConfirmModal.cshtml (Modal de Confirmação)**
+```html
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">Confirmação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-triangle-exclamation text-warning fs-1 me-3"></i>
+                    <div>
+                        <p class="mb-0" id="confirmMessage">Mensagem de confirmação</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-times me-1"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">
+                    <i class="fa-solid fa-check me-1"></i>Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+### 5. **crud.css (Estilos Complementares)**
+```css
+/* Estados de loading */
+.dt-processing {
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
+
+/* Toggle de status */
+.status-toggle {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.status-toggle:hover {
+    transform: scale(1.1);
+}
+
+/* Botões de ação */
+.action-buttons .btn {
+    margin: 0 2px;
+}
+
+/* Responsividade mobile */
+@media (max-width: 768px) {
+    .card-header {
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Melhorias de acessibilidade */
+.visually-hidden-focusable:not(:focus):not(:focus-within) {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+```
+
+---
+
+## ✅ Checklist de Implementação
+
+### Funcionalidades Core
+- [ ] Carregamento de configuração JSON
+- [ ] Inicialização da DataTable
+- [ ] Renderização dinâmica de colunas
+- [ ] Sistema de ações (Create, Edit, Delete)
+- [ ] Modais reutilizáveis
+- [ ] Integração CSRF
+- [ ] Feedback visual (loading/toasts)
+
+### Funcionalidades Avançadas
+- [ ] Exclusão em massa
+- [ ] Toggle de status interativo
+- [ ] Validação client-side
+- [ ] Exportação (Excel, PDF, Print)
+- [ ] Busca global
+- [ ] Paginação configurável
+- [ ] Responsividade
+- [ ] Acessibilidade (ARIA)
+
+### Testes e Validação
+- [ ] Teste em diferentes entidades
+- [ ] Validação de segurança (CSRF)
+- [ ] Teste de responsividade
+- [ ] Validação de acessibilidade
+- [ ] Performance com grandes datasets
+
+---
+
+## 🎯 Resultado Esperado
+
+Um sistema de grid completamente genérico onde:
+
+1. **Desenvolvedores** podem criar novas telas apenas modificando o JSON de configuração
+2. **Usuários** têm uma experiência consistente e intuitiva em todas as telas
+3. **Sistema** mantém segurança, performance e acessibilidade
+4. **Manutenção** é centralizada e simplificada
+
+**Critério de Sucesso**: Qualquer desenvolvedor deve conseguir criar uma nova grid funcional em menos de 5 minutos, apenas copiando a View e ajustando o JSON de configuração.

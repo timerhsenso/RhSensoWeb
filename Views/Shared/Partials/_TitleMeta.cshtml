@@ -1,23 +1,27 @@
-﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+﻿@using Microsoft.AspNetCore.Antiforgery
+@inject IAntiforgery Xsrf
+
 @{
-    var tokens = Xsrf.GetAndStoreTokens(Context);
+    // Em view Razor use ViewContext.HttpContext (ou apenas Context)
+    var tokens = Xsrf.GetAndStoreTokens(ViewContext.HttpContext);
 }
+
+
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-
 @{
     var title = ViewBag.Title != null
-    ? ViewBag.Title + " | RhSensoWEB - Responsive Bootstrap 5 Admin Dashboard"
-    : "RhSensoWEB - Responsive Bootstrap 5 Admin Dashboard";
+    ? ViewBag.Title + " | INSPINIA - Responsive Bootstrap 5 Admin Dashboard"
+    : "INSPINIA - Responsive Bootstrap 5 Admin Dashboard";
 }
-
 <title>@title</title>
+
 
 <meta name="description" content="Inspinia is the #1 best-selling admin dashboard template on WrapBootstrap. Perfect for building CRM, CMS, project management tools, and custom web apps with clean UI, responsive design, and powerful features.">
 <meta name="keywords" content="Inspinia, admin dashboard, WrapBootstrap, HTML template, Bootstrap admin, CRM template, CMS template, responsive admin, web app UI, admin theme, best admin template">
 <meta name="author" content="WebAppLayers">
+
 
 @* Anti-CSRF:
    - GetAndStoreTokens(Context) grava o cookie token e retorna o RequestToken.
@@ -27,15 +31,10 @@
      combinando com o cookie token para mitigar CSRF.
    - Use apenas para MESMA ORIGEM; formulários normais já usam @Html.AntiForgeryToken().
 *@
+
 <meta name="request-verification-token" content="@tokens.RequestToken" />
 
+
+
 <!-- App favicon -->
-<link rel="shortcut icon" href="/images/favicon.ico">
-
-
-<!-- Vendor css -->
-<link href="~/css/vendors.min.css" rel="stylesheet" type="text/css">
-
-
-<!-- App css -->
-<link href="~/css/app.min.css" rel="stylesheet" type="text/css">
+<link rel="shortcut icon" href="~/images/favicon.ico">

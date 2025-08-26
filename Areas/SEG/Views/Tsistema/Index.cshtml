@@ -1,422 +1,85 @@
 @{
-    ViewBag.Areas = "SEG";
-    ViewBag.Views = "Tsistema";
-    ViewBag.Controller = "Tsistema";
-    ViewBag.Icon = "monitor-smartphone";
-    ViewBag.Title = "Tabela de Sistemas";
-    ViewBag.SubTitle = "Segurança";
-    ViewBag.HabilitaBtnNovo = true;
-    ViewBag.HabilitaBtnExportar = true;
+    ViewData["Title"] = "Sistemas";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
-@section Styles {
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" />
 
-    <!-- Custom CRUD Styles -->
-    <link href="/css/crud.css" rel="stylesheet" asp-append-version="true" />
-    <link href="~/css/datatables-advanced.css" rel="stylesheet" />
-
-    <!-- Page-Specific Styles -->
-    <style>
-        .crud-actions {
-            white-space: nowrap;
-        }
-
-        .status-badge {
-            font-size: 0.75rem;
-            padding: 0.25rem 0.5rem;
-        }
-
-        .table-responsive {
-            border-radius: 0.375rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        }
-
-        .custom-filters {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 0.375rem;
-            margin-bottom: 1rem;
-            border: 1px solid #dee2e6;
-        }
-
-        .filter-group {
-            display: flex;
-            gap: 0.5rem;
-            align-items-end;
-            flex-wrap: wrap;
-        }
-
-        .filter-item {
-            min-width: 120px;
-        }
-
-        .loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-            .loading-overlay.d-none {
-                display: none !important;
-            }
-
-        /* Remove breadcrumb separator only on this page */
-        .breadcrumb-item + .breadcrumb-item::before {
-            content: "";
-        }
-    </style>
-}
-
-<!-- Toast Container -->
-@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
-
-<!-- Page Title -->
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
-<!-- Top Bar -->
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
 
-<!-- Custom Filters -->
-<div class="container-fluid">
-    <div class="custom-filters d-none" id="customFilters">
-        <!-- [Filtros personalizados aqui - mantém o código atual] -->
+
+<!-- Button Trigger Customizer Offcanvas -->
+<div class="topbar-item d-none d-sm-flex">
+    <button class="topbar-link" data-bs-toggle="offcanvas" data-bs-target="#canvas-show-debug" type="button">
+        <i data-lucide="settings" class="fs-xxl"></i>
+    </button>
+</div>
+
+<div class="card shadow-sm">
+     <div class="card-body">
+        <table id="gridTsistema" class="table table-striped table-hover w-100"></table>
     </div>
 </div>
 
-<!-- Main Table Container -->
-<div class="container-fluid">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <!-- [Header da tabela - mantém o código atual] -->
-        </div>
+@* Observação:
+   Os partials de modal (_FormModal.cshtml e _ConfirmModal.cshtml) devem estar inclusos UMA VEZ no layout (_VerticalLayout),
+   antes dos scripts do rodapé. Se não estiverem, o DTUtil cai em fallback de navegação (sem modal). *@
 
-        <div class="card-body position-relative">
-            <!-- Loading Overlay -->
-            <div class="loading-overlay d-none" id="loadingOverlay">
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                    <p class="mt-2 text-muted">Carregando dados...</p>
-                </div>
-            </div>
-
-            <!-- Main Table -->
-            <div class="table-responsive">
-                <table id="tblTsistema" class="table table-striped table-hover w-100">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="10%">Código</th>
-                            <th>Descrição</th>
-                            <th width="12%" class="text-center">Status</th>
-                            <th width="120px" class="text-center">Ações</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-
-            <!-- Additional Info -->
-            <div class="row mt-3">
-                <div class="col-md-6">
-                    <small class="text-muted">
-                        <i class="ti ti-info-circle me-1"></i>
-                        Use Ctrl+N para novo registro, F5 para atualizar
-                    </small>
-                </div>
-                <div class="col-md-6 text-end">
-                    <small class="text-muted" id="tableInfo">
-                        <!-- Será preenchido pelo JavaScript -->
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modals -->
-<!-- [Mantém os modais atuais] -->
 @section Scripts {
-    <!-- DataTables JavaScript -->
-    <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
-    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
-    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script>
+        $(function () {
+          // Criação do DataTable (DTUtil v4). O campo "data" do JSON de GetData deve conter a lista.
+          DTUtil.createAjaxDataTable({
+            table: '#gridTsistema',
+            context: 'Tsistema',
+            useModal: true,             // tenta editar em modal; cai em fallback se AppModal não existir
+            rowId: 'cdsistema',         // nome do campo ID que vem no JSON
+            tokenField: 'token',        // nome do campo de token para exclusão segura
+            exportName: 'Sistemas',     // título nos arquivos exportados
 
-    <!-- Form Validation -->
-    @await Html.PartialAsync("_ValidationScriptsPartial")
+            routes: {
+              list: '/SEG/Tsistema/GetData',
+              editGet: '/SEG/Tsistema/Edit/{id}',
+              editPost: '/SEG/Tsistema/Edit/{id}',
+              deletePost: '/SEG/Tsistema/DeleteByToken',
+              deleteBatchPost: '/SEG/Tsistema/DeleteBatch', // opcional; se ausente, o DTUtil faz fallback 1-a-1
+              updateAtivoPost: '/SEG/Tsistema/UpdateAtivo'
+              // detailsGet: '/SEG/Tsistema/Details/{id}'    // se existir
+            },
 
-    <!-- CRUD Initialization -->
-    <!-- CRUD Factory e Configuração -->
-    <script type="module">
-        import { createCrudPage } from "/js/crud/page-factory.js";
-        import config from "/js/crud/pages/tsistema.config.js";
+            // Colunas centrais (a 1ª é checkbox e a última são ações — geradas automaticamente pelo DTUtil)
+            fields: [
+              { data: 'cdsistema', title: 'Código', width: '120px' },
+              { data: 'dcsistema', title: 'Descrição' },
+              { type: 'toggle', data: 'ativo', title: 'Ativo' } // envia POST x-www-form-urlencoded para UpdateAtivo
+            ],
 
-        // ===== FUNÇÕES AUXILIARES (DEFINIR ANTES DE USAR) =====
-        function showLoading(show) {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.toggle('d-none', !show);
-            }
-        }
+            // Ações dinâmicas (podem ser estendidas sem editar o JS)
+            actions: [
+              { name: 'edit',   icon: 'fa-pen',         class: 'btn-outline-primary',   title: 'Editar'  },
+              { name: 'delete', icon: 'fa-trash',       class: 'btn-outline-danger',    title: 'Excluir' },
+              { name: 'detail', icon: 'fa-circle-info', class: 'btn-outline-secondary', title: 'Detalhes' }
+            ]
+          });
 
-        function applyCustomFilters(dataTable) {
-            const status = document.getElementById('filterStatus')?.value;
-            const dataInicio = document.getElementById('filterDataInicio')?.value;
-            const dataFim = document.getElementById('filterDataFim')?.value;
-
-            // Aplicar filtro de status na coluna específica
-            if (status) {
-                dataTable.column(2).search(status === 'true' ? 'checked' : '(?!checked)', true, false);
-            } else {
-                dataTable.column(2).search('');
-            }
-
-            // Aplicar filtros de data (exemplo)
-            if (dataInicio || dataFim) {
-                console.log('Filtros de data:', { dataInicio, dataFim });
-            }
-
-            dataTable.draw();
-        }
-
-        function clearCustomFilters(dataTable) {
-            const filterStatus = document.getElementById('filterStatus');
-            const filterDataInicio = document.getElementById('filterDataInicio');
-            const filterDataFim = document.getElementById('filterDataFim');
-
-            if (filterStatus) filterStatus.value = '';
-            if (filterDataInicio) filterDataInicio.value = '';
-            if (filterDataFim) filterDataFim.value = '';
-
-            dataTable.search('').columns().search('').draw();
-        }
-
-        function exportData(format, dataTable) {
-            // Implementar exportação conforme o formato
-            const exportUrls = {
-                excel: '/SEG/Tsistema/Export?format=excel',
-                pdf: '/SEG/Tsistema/Export?format=pdf',
-                csv: '/SEG/Tsistema/Export?format=csv'
-            };
-
-            const url = exportUrls[format];
-            if (url) {
-                window.location.href = url;
-            }
-        }
-
-        function updateTableInfo(dataTable) {
-            const info = dataTable.page.info();
-            const infoElement = document.getElementById('tableInfo');
-
-            if (infoElement && info) {
-                infoElement.textContent =
-                    `Exibindo ${info.start + 1} a ${info.end} de ${info.recordsDisplay} registros` +
-                    (info.recordsTotal !== info.recordsDisplay ? ` (filtrado de ${info.recordsTotal})` : '');
-            }
-        }
-
-        function setupKeyboardShortcuts(crudInstance) {
-            document.addEventListener('keydown', (e) => {
-                // Ctrl + N = Novo
-                if (e.ctrlKey && e.key === 'n') {
-                    e.preventDefault();
-                    document.querySelector('#BtnCreateNew')?.click();
-                }
-
-                // F5 = Refresh
-                if (e.key === 'F5') {
-                    e.preventDefault();
-                    showLoading(true);
-                    crudInstance.refresh();
-                    setTimeout(() => showLoading(false), 500);
-                }
-
-                // Escape = Fechar modal
-                if (e.key === 'Escape') {
-                    const modals = document.querySelectorAll('.modal.show');
-                    modals.forEach(modal => {
-                        bootstrap.Modal.getInstance(modal)?.hide();
-                    });
-                }
-            });
-        }
-
-        function setupUIEvents(crudInstance) {
-            const { dataTable, refresh } = crudInstance;
-
-            // Toggle de filtros
-            document.getElementById('btnToggleFilters')?.addEventListener('click', () => {
-                const filters = document.getElementById('customFilters');
-                filters?.classList.toggle('d-none');
-            });
-
-            // Refresh manual
-            document.getElementById('btnRefresh')?.addEventListener('click', () => {
-                showLoading(true);
-                refresh();
-                setTimeout(() => showLoading(false), 500);
-            });
-
-            // Aplicar filtros personalizados
-            document.getElementById('btnApplyFilters')?.addEventListener('click', () => {
-                applyCustomFilters(dataTable);
-            });
-
-            // Limpar filtros
-            document.getElementById('btnClearFilters')?.addEventListener('click', () => {
-                clearCustomFilters(dataTable);
-            });
-
-            // Exportações
-            document.getElementById('btnExportExcel')?.addEventListener('click', () => {
-                exportData('excel', dataTable);
-            });
-
-            document.getElementById('btnExportPDF')?.addEventListener('click', () => {
-                exportData('pdf', dataTable);
-            });
-
-            document.getElementById('btnExportCSV')?.addEventListener('click', () => {
-                exportData('csv', dataTable);
-            });
-
-            // Atualizar informações da tabela
-            dataTable.on('draw', function() {
-                updateTableInfo(dataTable);
-            });
-
-            // Configurar atalhos de teclado
-            setupKeyboardShortcuts(crudInstance);
-        }
-
-        // ===== INICIALIZAÇÃO PRINCIPAL =====
-        window.addEventListener('DOMContentLoaded', () => {
-            // Verificar dependências
-            if (typeof $ === 'undefined') {
-                console.error('❌ jQuery não foi carregado!');
-                alert('Erro: jQuery não foi carregado. Verifique a conexão.');
-                return;
-            }
-
-            if (typeof $.fn.DataTable === 'undefined') {
-                console.error('❌ DataTables não foi carregado!');
-                alert('Erro: DataTables não foi carregado. Verifique a conexão.');
-                return;
-            }
-
-            try {
-                console.log('🔄 Iniciando CRUD...');
-
-                // Criar instância do CRUD
-                const crudInstance = createCrudPage(config);
-
-                // Expor globalmente para depuração
-                window.crudInstance = crudInstance;
-                window.dataTable = crudInstance.dataTable;
-
-                // Configurar eventos adicionais da interface
-                setupUIEvents(crudInstance);
-
-                console.log('✅ CRUD inicializado com sucesso');
-            } catch (error) {
-                console.error('❌ Erro ao inicializar CRUD:', error);
-                alert('Erro ao carregar a página: ' + error.message + '. Tente recarregar.');
-            }
+          // (Opcional) Handler específico para delete — os fallbacks já funcionam sem isto
+          DTUtil.actions.on('Tsistema', 'delete', async ({ id, meta, dt, button }) => {
+            const row   = dt.row($(button).closest('tr')).data() || {};
+            const token = row?.[meta.tokenField];
+            if (!token) return (window.AppNotifier ? AppNotifier.warn('Token ausente para exclusão.') : alert('Token ausente para exclusão.'));
+            const ok = window.AppModal?.confirm ? await AppModal.confirm('Excluir este registro?') : confirm('Excluir este registro?');
+            if (!ok) return;
+            $.ajax({
+              url: meta.routes.deletePost,
+              type: 'POST',
+              contentType: 'application/json; charset=UTF-8',
+              data: JSON.stringify({ token })
+            }).done(() => {
+              window.AppNotifier && AppNotifier.success('Excluído com sucesso.');
+              dt.ajax.reload(null, false);
+            }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
+          });
         });
     </script>
-
-
-
-<script>
-// Debug: Interceptar dados do AJAX para verificar estrutura
-$(document).ready(function() {
-    // Aguardar a tabela ser inicializada
-    setTimeout(() => {
-        if (window.dataTable) {
-            // Interceptar próxima requisição AJAX
-            const originalAjax = window.dataTable.settings()[0].ajax;
-            
-            if (typeof originalAjax === 'object') {
-                const originalSuccess = originalAjax.success || function() {};
-                
-                originalAjax.success = function(data) {
-                    console.log('🔍 DADOS RECEBIDOS DO SERVIDOR:');
-                    console.log('📊 Estrutura completa:', data);
-                    console.log('📈 Total de registros:', data.recordsTotal);
-                    console.log('🔢 Registros filtrados:', data.recordsFiltered);
-                    console.log('📋 Array de dados:', data.data);
-                    
-                    if (data.data && data.data.length > 0) {
-                        console.log('🔎 Primeiro registro (estrutura):', data.data[0]);
-                        console.log('🗂️ Propriedades do primeiro registro:', Object.keys(data.data[0]));
-                    } else {
-                        console.warn('⚠️ Nenhum dado retornado ou array vazio');
-                    }
-                    
-                    // Verificar se as colunas mapeadas existem nos dados
-                    const expectedColumns = ['codigo', 'descricao', 'status', 'id'];
-                    if (data.data && data.data.length > 0) {
-                        expectedColumns.forEach(col => {
-                            if (data.data[0].hasOwnProperty(col)) {
-                                console.log(`✅ Coluna '${col}' encontrada`);
-                            } else {
-                                console.warn(`❌ Coluna '${col}' NÃO encontrada`);
-                                console.log(`💡 Propriedades disponíveis:`, Object.keys(data.data[0]));
-                            }
-                        });
-                    }
-                    
-                    // Chamar função original
-                    originalSuccess.call(this, data);
-                };
-            }
-            
-            // Recarregar para capturar dados
-            console.log('🔄 Recarregando tabela para debug...');
-            window.dataTable.ajax.reload();
-        } else {
-            console.error('❌ window.dataTable não está disponível');
-        }
-    }, 1000);
-});
-
-// Debug adicional: verificar estrutura esperada vs recebida
-function debugTableStructure() {
-    console.log('🔧 === DEBUG DA ESTRUTURA DA TABELA ===');
-    
-    if (window.dataTable) {
-        const columns = window.dataTable.columns().header();
-        console.log('📋 Colunas da tabela:', Array.from(columns).map(th => th.textContent));
-        
-        const columnDefs = window.dataTable.settings()[0].aoColumns;
-        console.log('⚙️ Definições das colunas:');
-        columnDefs.forEach((col, index) => {
-            console.log(`   ${index}: data='${col.data}', name='${col.name}'`);
-        });
-    }
-    
-    return 'Debug executado - veja o console';
-}
-
-// Disponibilizar função globalmente
-window.debugTableStructure = debugTableStructure;
-
-console.log('🚀 Script de debug carregado. Execute debugTableStructure() no console quando necessário.');
-</script>
-
 }

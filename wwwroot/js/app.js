@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Template Name: INSPINIA - Multipurpose Admin & Dashboard Template
  * By (Author): WebAppLayers
  * Module/App (File Name): Main App JS File
@@ -173,69 +173,57 @@ class App {
     }
 
     // Counter for Numbers
+    // Counter for Numbers  ✅ corrigido
     initCounter() {
-        const counters = document.querySelectorAll("[data-target]");
+        // 1) Selecione apenas contadores "marcados"
+        //    - elementos com .counter e data-target
+        //    - OU elementos que tenham data-target + data-counter
+        const counters = document.querySelectorAll('.counter[data-target], [data-target][data-counter]');
 
-        const observer = new IntersectionObserver(
-            (entries, observer) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const counter = entry.target;
+        const observer = new IntersectionObserver((entries, observer) => {
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
 
-                        // Parse the target value, removing any commas first
-                        let target = counter.getAttribute("data-target").replace(/,/g, "");
+                const el = entry.target;
 
-                        target = parseFloat(target); // Convert to float
+                // 2) Leia o alvo e valide que é NUMÉRICO
+                const raw = (el.getAttribute('data-target') || '').toString().replace(/,/g, '');
+                const target = Number.parseFloat(raw);
 
-                        let current = 0; // Initial counter value
+                if (!Number.isFinite(target)) {
+                    // Não é um contador válido (ex.: "#gridTsistema") → não mexe no texto
+                    observer.unobserve(el);
+                    return;
+                }
 
-                        let increment; // Increment step for smooth animation
+                let current = 0;
+                const steps = 25;
+                const increment = target / steps;
 
-                        if (Number.isInteger(target)) {
-                            increment = Math.floor(target / 25); // Increment for integer values
-                        } else {
-                            increment = target / 25; // Increment for float values
-                        }
+                const formatNumber = (num) => {
+                    return Number.isInteger(num)
+                        ? Math.round(num).toLocaleString()
+                        : Number(num).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                };
 
-                        const updateCounter = () => {
-                            if (current < target) {
-                                current += increment;
-                                if (current > target) current = target; // Avoid overshooting
-                                // Format as integer or decimal and add commas
-                                counter.innerText = formatNumber(current);
-                                requestAnimationFrame(updateCounter); // Continue animation frame by frame
-                            } else {
-                                counter.innerText = formatNumber(target); // Final display
-                            }
-                        };
-
-                        updateCounter(); // Start the animation
-
-                        // Function to format numbers with commas and decimal places if necessary
-                        function formatNumber(num) {
-                            if (num % 1 === 0) {
-                                // Format as integer with commas
-                                return num.toLocaleString();
-                            } else {
-                                // Format as float with two decimal places and commas
-                                return num.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                });
-                            }
-                        }
-
-                        observer.unobserve(counter);
+                const update = () => {
+                    if (current < target) {
+                        current = Math.min(target, current + increment);
+                        el.textContent = formatNumber(current);
+                        requestAnimationFrame(update);
+                    } else {
+                        el.textContent = formatNumber(target);
                     }
-                });
-            },
-            {
-                threshold: 1, // Adjust this threshold to control when to trigger (e.g., 0.5 means 50% of the element is visible)
-            }
-        );
+                };
 
-        counters.forEach((counter) => observer.observe(counter));
+                update();
+                observer.unobserve(el);
+            });
+        }, { threshold: 1 });
+
+        counters.forEach((c) => observer.observe(c));
     }
+
 
     // Code Preview
     initCodePreview() {
@@ -507,6 +495,7 @@ class LayoutCustomizer {
         this._adjustLayout();
         this.setSwitchFromConfig();
         this.openCustomizer(); // demo only
+        this.openDebugJs();
     }
 
     initConfig() {
@@ -529,6 +518,18 @@ class LayoutCustomizer {
     openCustomizer() {
         const layoutCustomizer = document.getElementById(
             "theme-settings-offcanvas"
+        );
+        if (layoutCustomizer && this.isFirstVisit()) {
+            const offcanvas = new bootstrap.Offcanvas(layoutCustomizer);
+            setTimeout(() => {
+                offcanvas.show();
+            }, 1000);
+        }
+    }
+
+    openDebugJs() {
+        const layoutCustomizer = document.getElementById(
+            "canvas-show-debug"
         );
         if (layoutCustomizer && this.isFirstVisit()) {
             const offcanvas = new bootstrap.Offcanvas(layoutCustomizer);

@@ -1,30 +1,31 @@
-﻿<!-- Theme Config Js -->
-<script src="~/js/config.js"></script>
-
-<!-- Vendors (jQuery, Bootstrap, etc.) -->
+﻿@* 1) Vendors do tema (traz jQuery/Bootstrap, etc.). Evite ter outra jQuery em paralelo *@
 <script src="~/js/vendors.min.js"></script>
 
-<!-- App Core -->
-<script src="~/js/app.js"></script>
-
-<!-- Security Setup -->
+@* (Opcional) Fallback: se por algum motivo jQuery não veio nos vendors, carrega do CDN *@
 <script>
-    (function () {
-        var token = document.querySelector('meta[name="request-verification-token"]')?.getAttribute('content');
-        if (!token) return;
-
-        // jQuery AJAX Setup
-        if (window.$ && $.ajaxSetup) {
-            $.ajaxSetup({
-                headers: { 'RequestVerificationToken': token }
-            });
-        }
-
-        // Secure Fetch Wrapper
-        window.secureFetch = async function (url, options) {
-            options = options || {};
-            options.headers = Object.assign({}, options.headers, { 'RequestVerificationToken': token });
-            return fetch(url, options);
-        };
-    })();
+    window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.7.1.min.js"><\/script>');
 </script>
+
+@* 2) DataTables + Buttons (HTML5/Print) — precisa estar após jQuery *@
+<script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/datatables.min.js"></script>
+
+@* 3) Dependências dos botões HTML5 (Excel/PDF) *@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+@* 4) Utilitários globais *@
+<script src="~/js/app-notifier.js" asp-append-version="true"></script>
+<script src="~/js/app-ajax.js" asp-append-version="true"></script>
+<script src="~/js/app-modal.js" asp-append-version="true"></script>
+<script src="~/js/dt-util.js" asp-append-version="true"></script>
+
+@* 5) Bootstrap do DTUtil (CSRF + delegados globais). Seguro mesmo se DTUtil não existir *@
+<script>
+    window.DTUtil && DTUtil.setupAjaxCsrf();
+    window.DTUtil && DTUtil.initGlobalDelegates();
+</script>
+
+@* 6) App do tema/site — por último, após tudo acima estar carregado *@
+<script src="~/js/app.js" asp-append-version="true"></script>
+

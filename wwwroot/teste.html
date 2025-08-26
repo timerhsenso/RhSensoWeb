@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Resource Debugger - Demonstração</title>
+    
+    <!-- 
+    ⚠️ IMPORTANTE: O script do debugger deve ser carregado ANTES de qualquer outro recurso!
+    Isso garante que todos os arquivos CSS/JS sejam monitorados desde o início.
+    -->
+    <script>
+        // Configuração opcional - controle manual da inicialização
+        window.RESOURCE_DEBUG_MANUAL_INIT = true;
+    </script>
+    <script src="js/resource-loader-debug.js"></script>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Exemplo de CSS personalizado -->
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 60px 0;
+        }
+        
+        .feature-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+            overflow-x: auto;
+        }
+        
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff5f57;
+            box-shadow: 22px 0 0 #ffbd2e, 44px 0 0 #28ca42;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            padding-top: 20px;
+            color: inherit;
+            background: transparent;
+            border: none;
+        }
+        
+        .btn-demo {
+            margin: 5px;
+            min-width: 160px;
+        }
+        
+        .log-output {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-loading { background: #3498db; color: white; }
+        .status-success { background: #27ae60; color: white; }
+        .status-error { background: #e74c3c; color: white; }
+        .status-timeout { background: #f39c12; color: white; }
+    </style>
+    
+    <!-- Exemplo de CSS que vai falhar (para demonstrar detecção de erros) -->
+    <link rel="stylesheet" href="css/arquivo-nao-existe.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-4">🔍 Resource Debugger</h1>
+                    <p class="lead mb-4">
+                        Ferramenta avançada para monitoramento e debug do carregamento de recursos CSS e JavaScript em tempo real.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <span class="badge bg-success fs-6">✅ Monitoramento Automático</span>
+                        <span class="badge bg-info fs-6">📊 Relatórios Detalhados</span>
+                        <span class="badge bg-warning text-dark fs-6">⚡ Performance Tracking</span>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <i class="fas fa-bug fa-8x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instruções de Uso -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">📋 Como Usar</h2>
+            
+            <div class="row mb-5">
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card feature-card text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-eye fa-3x text-primary mb-3"></i>
+                            <h5>1. Observe o Indicador</h5>
+                            <p class="text-muted">Veja o status no canto superior direito da tela</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card feature-card text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-terminal fa-3x text-success mb-3"></i>
+                            <h5>2. Abra o Console</h5>
+                            <p class="text-muted">Pressione F12 para ver logs detalhados</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card feature-card text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-mouse-pointer fa-3x text-info mb-3"></i>
+                            <h5>3. Clique no Indicador</h5>
+                            <p class="text-muted">Veja o relatório completo de recursos</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3 mb-4">
+                    <div class="card feature-card text-center p-4">
+                        <div class="card-body">
+                            <i class="fas fa-download fa-3x text-warning mb-3"></i>
+                            <h5>4. Export JSON</h5>
+                            <p class="text-muted">Exporte relatórios para análise</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Instalação -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">⚙️ Instalação</h2>
+            
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <h4>🚀 Instalação Básica</h4>
+                    <p>Adicione o script <strong>ANTES</strong> de qualquer outro recurso CSS/JS:</p>
+                    <div class="code-block">
+                        <pre>&lt;head&gt;
+    &lt;!-- Adicione PRIMEIRO, antes de qualquer CSS/JS --&gt;
+    &lt;script src="resource-loader-debug.js"&gt;&lt;/script&gt;
+    
+    &lt;!-- Agora seus recursos serão monitorados --&gt;
+    &lt;link rel="stylesheet" href="styles.css"&gt;
+    &lt;script src="app.js"&gt;&lt;/script&gt;
+&lt;/head&gt;</pre>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6 mb-4">
+                    <h4>🎯 ASP.NET Core</h4>
+                    <p>Para usar apenas em desenvolvimento:</p>
+                    <div class="code-block">
+                        <pre>@if (Environment.IsDevelopment())
+{
+    &lt;script src="~/js/resource-loader-debug.js" 
+            asp-append-version="true"&gt;&lt;/script&gt;
+}
+
+&lt;!-- Seus recursos CSS/JS aqui --&gt;
+&lt;link rel="stylesheet" href="~/css/site.css" 
+      asp-append-version="true" /&gt;</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Controles de Demonstração -->
+    <section class="py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">🎮 Demonstração Interativa</h2>
+            
+            <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">🕹️ Controles de Teste</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-primary btn-demo" onclick="initializeDebugger()">
+                                        🚀 Inicializar Debugger
+                                    </button>
+                                    <button class="btn btn-outline-success btn-demo" onclick="showStats()">
+                                        📊 Mostrar Estatísticas
+                                    </button>
+                                    <button class="btn btn-outline-info btn-demo" onclick="loadDynamicResources()">
+                                        📥 Carregar Recursos
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <button class="btn btn-outline-warning btn-demo" onclick="loadFailingResources()">
+                                        ❌ Simular Erros
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-demo" onclick="showDetailedReport()">
+                                        📋 Relatório Detalhado
+                                    </button>
+                                    <button class="btn btn-outline-dark btn-demo" onclick="exportData()">
+                                        💾 Exportar JSON
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">

@@ -1,26 +1,13 @@
-﻿
-@*
-Importa do arquivo /js/core/http.js a função ensureAjaxSetup.
+﻿@* Theme Config (se seu tema usa) *@
+<script src="~/js/config.js"></script>
 
-Executa essa função logo em seguida.
+@* CSS do tema *@
+<link href="~/css/vendors.min.css" rel="stylesheet" type="text/css" />
+<link href="~/css/app.min.css" rel="stylesheet" type="text/css" />
 
-O objetivo usual dessa função (no seu projeto) é configurar globalmente as requisições AJAX/fetch: por exemplo,
+@* DataTables + Buttons (build único com HTML5/Print) *@
+<link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/datatables.min.css" />
 
-ler o token anti-forgery do <meta name="request-verification-token">
-
-injetar o header em jQuery AJAX ($.ajaxSetup) e/ou fetch
-
-padronizar erros 401/403, credentials, etc.
-*@
-<script type="module">
-    import { ensureAjaxSetup } from "/js/core/http.js";
-    ensureAjaxSetup();
-</script>
-
-
-
-
-
-
-
-
+@* Ícones e toasts *@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+<link rel="stylesheet" href="~/css/app-notifier.css" asp-append-version="true" />
