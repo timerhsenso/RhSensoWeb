@@ -60,7 +60,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     })
                     .ToListAsync();
 
-                return Json(data);
+                return Json(new { data });
             }
             catch (Exception ex)
             {
