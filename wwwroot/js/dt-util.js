@@ -174,3 +174,45 @@ window.DTUtil = (function () {
   function toggleColumnsByName(dt, names=[], visible){ names.forEach(n=> setColumnVisibility(dt, n, visible)); }
   return { setupAjaxCsrf, initGlobalDelegates, createAjaxDataTable, actions: { on, onMany }, exportTable, setColumnVisibility, toggleColumnsByName, getSelectedRows, renderers };
 })();
+
+
+// === Busca global por input externo =============================
+// Usa debounce e funciona com DataTables puro ou instância salva pelo DTUtil.
+DTUtil.bindInputSearch = function (inputSelector, tableSelector, delayMs = 300) {
+    // debounce simples
+    const debounce = (fn, wait) => {
+        let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+    };
+
+    const $input = $(inputSelector);
+    const $table = $(tableSelector || $input.attr('data-dt-target'));
+
+    if (!$input.length || !$table.length) {
+        console.warn('DTUtil.bindInputSearch: input ou tabela não encontrado.', { inputSelector, tableSelector });
+        return;
+    }
+
+    // pega a instância (via DTUtil ou DataTables puro)
+    const dt = $table.data('dt-api') || ($.fn.dataTable.isDataTable($table) ? $table.DataTable() : null);
+    if (!dt) {
+        console.warn('DTUtil.bindInputSearch: DataTable ainda não inicializado.', { tableSelector });
+        return;
+    }
+
+    const doSearch = debounce(() => {
+        const term = ($input.val() || '').toString();
+        dt.search(term).draw(); // server-side ou client-side
+    }, delayMs);
+
+    // remove handlers antigos e adiciona novos (namespace .dtSearch)
+    $input.off('.dtSearch')
+        .on('input.dtSearch', doSearch)   // digitação
+        .on('search.dtSearch', doSearch)  // clique no "X" de limpar
+        .on('keydown.dtSearch', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); doSearch(); } // Enter: busca imediata
+            if (e.key === 'Escape') {                                   // Esc: limpa
+                $input.val('');
+                dt.search('').draw();
+            }
+        });
+};

@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using RhSensoWeb.Data;
-using RhSensoWeb.Models;
-using RhSensoWeb.Services.Security;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Caching.Memory;
-using RhSensoWeb.Filters; // << requer o RequirePermissionAttribute
+
+using RhSensoWeb.Data;
+using RhSensoWeb.Models;
+using RhSensoWeb.Filters;              // RequirePermission
+using RhSensoWeb.Services.Security;    // IRowTokenService
 
 namespace RhSensoWeb.Areas.SEG.Controllers
 {
@@ -30,7 +31,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             _cache = memoryCache;
         }
 
-        // ===== Tipo auxiliar (payload do token) =====
+        // ===== Payload do token =====
         public sealed record RowKeys(string Cdusuario);
 
         // GET: /SEG/Usuario
@@ -39,7 +40,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public IActionResult Index() => View();
 
         // GET: /SEG/Usuario/GetData
-        // DataTables: retorna { data: [...] }
+        // Retorno para DataTables: { data: [...] }
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public async Task<IActionResult> GetData()
@@ -47,6 +48,8 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             try
             {
                 var userId = User?.Identity?.Name ?? "anon";
+
+                // Busque os dados necessários para a grid
                 var rows = await _context.Tuse1
                     .AsNoTracking()
                     .OrderBy(x => x.Cdusuario)
@@ -54,32 +57,33 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     {
                         cdusuario = x.Cdusuario,
                         dcusuario = x.Dcusuario,
-                        tpusuario = x.Tpusuario,
                         email_usuario = x.Email_usuario,
+                        tpusuario = x.Tpusuario,
                         ativo = x.Ativo
                     })
                     .ToListAsync();
 
+                // Anexe o token esperado pelo front (nome do campo "token")
                 var data = rows.Select(r =>
                 {
                     var id = (r.cdusuario ?? string.Empty).Trim();
+
+                    var delToken = _rowToken.Protect(
+                        payload: new RowKeys(id),
+                        purpose: "Delete",
+                        userId: userId,
+                        ttl: TimeSpan.FromMinutes(10));
+
+                    // Retorne exatamente o que a view espera
                     return new
                     {
-                        cdusuario = id,
+                        r.cdusuario,
                         r.dcusuario,
+                        r.email_usuario,          // << agora existe no JSON
                         r.tpusuario,
-                        r.email_usuario,
+                        tipo_desc = (r.tpusuario?.ToString() == "1") ? "Empregado" : "Terceiro", // << AQUI
                         r.ativo,
-                        editToken = _rowToken.Protect(
-                            payload: new RowKeys(id),
-                            purpose: "Edit",
-                            userId: userId,
-                            ttl: TimeSpan.FromMinutes(10)),
-                        deleteToken = _rowToken.Protect(
-                            payload: new RowKeys(id),
-                            purpose: "Delete",
-                            userId: userId,
-                            ttl: TimeSpan.FromMinutes(10))
+                        token = delToken        // << importante para o tokenField: 'token'
                     };
                 });
 
@@ -93,6 +97,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         }
 
         // POST: /SEG/Usuario/UpdateAtivo
+        // Recebe x-www-form-urlencoded: id=...&ativo=true|false
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("UpdateAtivoPolicy")]
@@ -108,12 +113,12 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     return Json(new { success = false, message = "ID do usuário é obrigatório." });
                 }
 
+                // Anti-bounce simples
                 var userId = User?.Identity?.Name ?? "anon";
                 var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
                 if (_cache.TryGetValue(cooldownKey, out _))
-                {
                     return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
-                }
+
                 _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
@@ -126,33 +131,18 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 if (entidade.Ativo == ativo)
                     return Json(new { success = true, message = "Status já estava atualizado." });
 
-                entidade.Ativo = ativo; // setter converte para Flativo S/N
-                await _context.SaveChangesAsync();
+                // A propriedade Ativo deve aplicar conversão para Flativ internamente (conforme seu modelo)
+                entidade.Ativo = ativo;
 
-                return Json(new
-                {
-                    success = true,
-                    message = ativo ? "Usuário ativado com sucesso!" : "Usuário desativado com sucesso!"
-                });
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                _logger.LogError(ex, "Concorrência ao atualizar usuário {Id}", id);
-                return Json(new { success = false, message = "Registro modificado por outro usuário. Recarregue a página." });
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Erro de banco ao atualizar usuário {Id}", id);
-                return Json(new { success = false, message = "Erro ao salvar no banco de dados. Tente novamente." });
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Atualizado com sucesso." });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao atualizar usuário {Id}", id);
-                return Json(new { success = false, message = "Erro interno do servidor." });
+                _logger.LogError(ex, "Erro ao atualizar status de usuário {Id}", id);
+                return Json(new { success = false, message = "Erro ao atualizar." });
             }
         }
-
-        // ===== Edição segura com token =====
 
         // GET: /SEG/Usuario/SafeEdit?token=...
         [HttpGet]
@@ -171,7 +161,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return View("Edit", entity);
         }
 
-        // ===== Exclusão por token via AJAX =====
+        // ==== Exclusão por token (1 a 1) ====
 
         public sealed class DeleteByTokenDto { public string Token { get; set; } = ""; }
 
@@ -211,117 +201,96 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             }
         }
 
-        // ===== CRUD padrão =====
+        // ==== Exclusão em lote por token (opcional, para bulk delete do grid) ====
 
+        public sealed class DeleteBatchDto { public List<string> Tokens { get; set; } = new(); }
+
+        // POST: /SEG/Usuario/DeleteBatch
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequirePermission("SEG", "SEG_USUARIOS", "E")]
+        public async Task<IActionResult> DeleteBatch([FromBody] DeleteBatchDto dto)
+        {
+            if (dto?.Tokens == null || dto.Tokens.Count == 0)
+                return BadRequest(new { success = false, message = "Nenhum token informado." });
+
+            var userId = User?.Identity?.Name ?? "anon";
+            int ok = 0, fail = 0;
+
+            foreach (var token in dto.Tokens)
+            {
+                try
+                {
+                    var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
+                    if (purpose != "Delete" || tokenUser != userId) { fail++; continue; }
+
+                    var entity = await _context.Tuse1.FindAsync(keys.Cdusuario);
+                    if (entity is null) { fail++; continue; }
+
+                    _context.Tuse1.Remove(entity);
+                    ok++;
+                }
+                catch
+                {
+                    fail++;
+                }
+            }
+
+            if (ok > 0)
+            {
+                try { await _context.SaveChangesAsync(); }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Erro ao confirmar exclusão em lote de usuários");
+                    return StatusCode(500, new { success = false, message = "Erro ao gravar exclusões." });
+                }
+            }
+
+            return Ok(new { success = fail == 0, ok, fail });
+        }
+
+        // ==== Ações padrão (opcionais para navegação direta) ====
+
+        // GET: /SEG/Usuario/Details/{id}
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "C")]
         public async Task<IActionResult> Details(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
-            var entity = await _context.Tuse1
-                .AsNoTracking()
+            var entity = await _context.Tuse1.AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Cdusuario == id);
 
             if (entity == null) return NotFound();
             return View(entity);
         }
 
-        [HttpGet]
-        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
-        public IActionResult Create() => View(new Tuse1());
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
-        public async Task<IActionResult> Create([Bind("Cdusuario,Dcusuario,Senhauser,Nmimpcche,Tpusuario,Nomatric,Cdempresa,Cdfilial,Nouser,Email_usuario,Ativo,Id,NormalizedUsername,IdFuncionario,NaoRecebeEmail")] Tuse1 model)
-        {
-            if (!ModelState.IsValid) return View(model);
-
-            try
-            {
-                var existente = await _context.Tuse1
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.Cdusuario == model.Cdusuario);
-
-                if (existente != null)
-                {
-                    ModelState.AddModelError("Cdusuario", "Já existe um usuário com este código.");
-                    return View(model);
-                }
-
-                _context.Add(model);
-                await _context.SaveChangesAsync();
-
-                TempData["SuccessMessage"] = "Usuário criado com sucesso!";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao criar usuário {Id}", model.Cdusuario);
-                ModelState.AddModelError("", "Erro ao salvar o usuário. Tente novamente.");
-                return View(model);
-            }
-        }
-
+        // GET: /SEG/Usuario/Edit/{id}
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "A")]
         public async Task<IActionResult> Edit(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
-
             var entity = await _context.Tuse1.FindAsync(id);
             if (entity == null) return NotFound();
-
             return View(entity);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
-        public async Task<IActionResult> Edit(string id, [Bind("Cdusuario,Dcusuario,Senhauser,Nmimpcche,Tpusuario,Nomatric,Cdempresa,Cdfilial,Nouser,Email_usuario,Ativo,Id,NormalizedUsername,IdFuncionario,NaoRecebeEmail")] Tuse1 model)
-        {
-            if (id != model.Cdusuario) return NotFound();
-            if (!ModelState.IsValid) return View(model);
-
-            try
-            {
-                _context.Update(model);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Usuário atualizado com sucesso!";
-                return RedirectToAction(nameof(Index));
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                if (!_context.Tuse1.Any(e => e.Cdusuario == model.Cdusuario))
-                    return NotFound();
-
-                _logger.LogError(ex, "Concorrência ao editar usuário {Id}", id);
-                ModelState.AddModelError("", "O registro foi modificado por outro usuário. Recarregue a página.");
-                return View(model);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao editar usuário {Id}", id);
-                ModelState.AddModelError("", "Erro ao salvar as alterações. Tente novamente.");
-                return View(model);
-            }
-        }
-
+        // GET: /SEG/Usuario/Delete/{id}
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
-            var entity = await _context.Tuse1
-                .AsNoTracking()
+            var entity = await _context.Tuse1.AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Cdusuario == id);
 
             if (entity == null) return NotFound();
             return View(entity);
         }
 
+        // POST: /SEG/Usuario/Delete (form padrão)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
