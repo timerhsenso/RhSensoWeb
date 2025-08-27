@@ -82,7 +82,7 @@ namespace RhSensoWeb
                         options.AccessDeniedPath = "/Error/Error403";
 
 
-                        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // mantido
+                        options.ExpireTimeSpan = TimeSpan.FromHours(2); // mantido
                         options.SlidingExpiration = true;
                     });
 

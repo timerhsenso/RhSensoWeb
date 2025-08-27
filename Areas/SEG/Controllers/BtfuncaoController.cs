@@ -1,348 +1,212 @@
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Authorization;
 using RhSensoWeb.Data;
 using RhSensoWeb.Models;
 
 namespace RhSensoWeb.Areas.SEG.Controllers
 {
     [Area("SEG")]
+    [Authorize] // ajuste se usar políticas específicas
     public class BtfuncaoController : Controller
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IDataProtector _protector;
+        private readonly ApplicationDbContext _db;
 
-        public BtfuncaoController(ApplicationDbContext context, IDataProtectionProvider dp)
+        public BtfuncaoController(ApplicationDbContext db)
         {
-            _context = context;
-            _protector = dp.CreateProtector("Btfuncao.DeleteToken.v1");
+            _db = db;
         }
 
-        // GET: /SEG/Btfuncao
-        [HttpGet]
+        // GET: SEG/Btfuncao
         public IActionResult Index()
         {
-            ViewBag.Areas = "SEG";
-            ViewBag.Views = "Btfuncao";
-            ViewBag.Controller = "Btfuncao";
-            ViewBag.HabilitaBtnNovo = true;
-            ViewBag.HabilitaBtnExportar = true;
-
-            ViewBag.Title = "Botões por Função";
-            ViewBag.SubTitle = "Segurança";
+            // A view deve carregar DataTable via AJAX em /SEG/Btfuncao/GetData
             return View();
         }
 
-        // GET: /SEG/Btfuncao/GetData
+        // GET: SEG/Btfuncao/GetData
+        // Endpoint para DataTables (retorna todos os botões/funções)
         [HttpGet]
         public async Task<IActionResult> GetData()
         {
-            try
-            {
-                var data = await _context.Btfuncao
-                    .AsNoTracking()
-                    .Select(b => new
-                    {
-                        cdsistema = b.Cdsistema,
-                        cdfuncao = b.Cdfuncao,
-                        nmbotao = b.Nmbotao,
-                        dcbotao = b.Dcbotao,
-                        cdacao = b.Cdacao,
-                        deleteToken = _protector.Protect($"{b.Cdsistema}|{b.Cdfuncao}|{b.Nmbotao}")
-                    })
-                    .ToListAsync();
+            // Projeção simples; ajuste nomes de propriedades conforme seu Model
+            var query = from b in _db.Btfuncao
+                        join s in _db.Tsistema on b.Cdsistema equals s.Cdsistema into sys
+                        from s in sys.DefaultIfEmpty()
+                        join f in _db.Fucn1 on new { b.Cdsistema, b.Cdfuncao } equals new { f.Cdsistema, f.Cdfuncao } into fun
+                        from f in fun.DefaultIfEmpty()
+                        select new
+                        {
+                            b.Cdsistema,
+                            Sistema = s != null ? s.Dcsistema : "",
+                            b.Cdfuncao,
+                            Funcao = f != null ? f.Dcfuncao : "",
+                            b.Nmbotcao,
+                            b.Dcacao,      // se existir no seu modelo
+                            b.Ativo        // se existir no seu modelo
+                        };
 
-                return Json(data);
-            }
-            catch (Exception ex)
-            {
-                return Json(new { error = "Erro ao carregar dados: " + ex.Message });
-            }
+            var data = await query.AsNoTracking().ToListAsync();
+            return Json(new { data });
         }
 
-        // GET: /SEG/Btfuncao/Create
-        [HttpGet]
+        // GET: SEG/Btfuncao/Create
         public async Task<IActionResult> Create()
         {
-            await PopularSelectsAsync(null, null);
-            ViewData["IsEdit"] = false;
-            return View(new Btfuncao());
+            await CarregarCombosAsync();
+            return View();
         }
 
-        // POST: /SEG/Btfuncao/Create
+        // POST: SEG/Btfuncao/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Btfuncao model)
         {
-            Normalizar(model);
-
             if (!ModelState.IsValid)
             {
-                await PopularSelectsAsync(model.Cdsistema, model.Cdfuncao);
-                ViewData["IsEdit"] = false;
+                await CarregarCombosAsync(model.Cdsistema);
                 return View(model);
             }
 
-            try
-            {
-                _context.Btfuncao.Add(model);
-                await _context.SaveChangesAsync();
+            var exists = await _db.Btfuncao
+                .AnyAsync(x => x.Cdsistema == model.Cdsistema
+                            && x.Cdfuncao == model.Cdfuncao
+                            && x.Nmbotcao == model.Nmbotcao);
 
-                TempData["SuccessMessage"] = "Registro incluído com sucesso.";
-                return RedirectToAction(nameof(Edit), new { cdsistema = model.Cdsistema, cdfuncao = model.Cdfuncao, nmbotao = model.Nmbotao });
-            }
-            catch (DbUpdateConcurrencyException)
+            if (exists)
             {
-                ModelState.AddModelError(string.Empty, "Conflito de concorrência. Recarregue a página.");
-            }
-            catch (DbUpdateException ex)
-            {
-                ModelState.AddModelError(string.Empty, HandleDbUpdateException(ex));
-            }
-            catch (Exception)
-            {
-                ModelState.AddModelError(string.Empty, "Falha ao salvar o registro.");
+                ModelState.AddModelError(string.Empty, "Já existe um registro com esta combinação de (Sistema, Função, Botão).");
+                await CarregarCombosAsync(model.Cdsistema);
+                return View(model);
             }
 
-            await PopularSelectsAsync(model.Cdsistema, model.Cdfuncao);
-            ViewData["IsEdit"] = false;
-            return View(model);
+            _db.Btfuncao.Add(model);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // GET: /SEG/Btfuncao/Edit?cdsistema=...&cdfuncao=...&nmbotao=...
-        [HttpGet]
-        public async Task<IActionResult> Edit(string cdsistema, string cdfuncao, string nmbotao)
+        // GET: SEG/Btfuncao/Edit/5?cdfuncao=10&nmbotcao=BTN_SALVAR
+        public async Task<IActionResult> Edit(int cdsistema, int cdfuncao, string nmbotcao)
         {
-            cdsistema = (cdsistema ?? "").Trim().ToUpper();
-            cdfuncao = (cdfuncao ?? "").Trim().ToUpper();
-            nmbotao = (nmbotao ?? "").Trim().ToUpper();
-
-            if (string.IsNullOrWhiteSpace(cdsistema) || string.IsNullOrWhiteSpace(cdfuncao) || string.IsNullOrWhiteSpace(nmbotao))
-                return NotFound();
-
-            var entity = await _context.Btfuncao.FindAsync(cdsistema, cdfuncao, nmbotao);
+            var entity = await _db.Btfuncao
+                .FirstOrDefaultAsync(x => x.Cdsistema == cdsistema
+                                       && x.Cdfuncao == cdfuncao
+                                       && x.Nmbotcao == nmbotcao);
             if (entity == null) return NotFound();
 
-            await PopularSelectsAsync(entity.Cdsistema, entity.Cdfuncao);
-            ViewData["IsEdit"] = true;
+            await CarregarCombosAsync(entity.Cdsistema);
             return View(entity);
         }
 
-        // POST: /SEG/Btfuncao/Edit
+        // POST: SEG/Btfuncao/Edit
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Btfuncao model)
+        public async Task<IActionResult> Edit(int cdsistema, int cdfuncao, string nmbotcao, Btfuncao model)
         {
-            // Chaves não podem mudar (PK composta)
-            var cdsistema = (model.Cdsistema ?? "").Trim().ToUpper();
-            var cdfuncao = (model.Cdfuncao ?? "").Trim().ToUpper();
-            var nmbotao = (model.Nmbotao ?? "").Trim().ToUpper();
+            // Garante edição do mesmo registro
+            if (cdsistema != model.Cdsistema || cdfuncao != model.Cdfuncao || nmbotcao != model.Nmbotcao)
+            {
+                return BadRequest("Chave do registro foi alterada. Edição não permitida.");
+            }
 
-            var entity = await _context.Btfuncao.FindAsync(cdsistema, cdfuncao, nmbotao);
+            if (!ModelState.IsValid)
+            {
+                await CarregarCombosAsync(model.Cdsistema);
+                return View(model);
+            }
+
+            var entity = await _db.Btfuncao
+                .FirstOrDefaultAsync(x => x.Cdsistema == cdsistema
+                                       && x.Cdfuncao == cdfuncao
+                                       && x.Nmbotcao == nmbotcao);
             if (entity == null) return NotFound();
 
-            // Atualiza apenas campos editáveis
-            entity.Dcbotao = (model.Dcbotao ?? "").Trim();
-            entity.Cdacao = (model.Cdacao ?? "").Trim().ToUpper();
+            // Atualize apenas os campos editáveis (evite sobrescrever chaves)
+            entity.Dcacao = model.Dcacao; // se existir
+            entity.Ativo = model.Ativo;  // se existir
+            // adicione outros campos não-chave aqui
 
-            try
-            {
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = "Registro atualizado com sucesso.";
-                return RedirectToAction(nameof(Edit), new { cdsistema, cdfuncao, nmbotao });
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                ModelState.AddModelError(string.Empty, "Conflito de concorrência. Recarregue a página.");
-            }
-            catch (DbUpdateException ex)
-            {
-                ModelState.AddModelError(string.Empty, HandleDbUpdateException(ex));
-            }
-            catch (Exception)
-            {
-                ModelState.AddModelError(string.Empty, "Falha ao salvar o registro.");
-            }
-
-            await PopularSelectsAsync(cdsistema, cdfuncao);
-            ViewData["IsEdit"] = true;
-            return View(entity);
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(Index));
         }
 
-        // POST: /SEG/Btfuncao/Delete (fallback sem token)
+        // POST: SEG/Btfuncao/Delete
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete(string cdsistema, string cdfuncao, string nmbotao)
+        public async Task<IActionResult> Delete(int cdsistema, int cdfuncao, string nmbotcao)
         {
-            cdsistema = (cdsistema ?? "").Trim().ToUpper();
-            cdfuncao = (cdfuncao ?? "").Trim().ToUpper();
-            nmbotao = (nmbotao ?? "").Trim().ToUpper();
+            var entity = await _db.Btfuncao
+                .FirstOrDefaultAsync(x => x.Cdsistema == cdsistema
+                                       && x.Cdfuncao == cdfuncao
+                                       && x.Nmbotcao == nmbotcao);
+            if (entity == null) return NotFound();
 
-            try
-            {
-                var entity = await _context.Btfuncao.FindAsync(cdsistema, cdfuncao, nmbotao);
-                if (entity == null)
-                    return Json(new { success = false, message = "Registro não encontrado." });
-
-                _context.Btfuncao.Remove(entity);
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true });
-            }
-            catch (DbUpdateException ex)
-            {
-                return Json(new { success = false, message = HandleDbUpdateException(ex) });
-            }
-            catch (Exception)
-            {
-                return Json(new { success = false, message = "Erro ao excluir registro." });
-            }
+            _db.Btfuncao.Remove(entity);
+            await _db.SaveChangesAsync();
+            return Ok(new { success = true });
         }
 
-        // POST: /SEG/Btfuncao/DeleteByToken  (preferencial)
-        public class DeleteTokenDto { public string? Token { get; set; } }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteByToken([FromBody] DeleteTokenDto dto)
-        {
-            try
-            {
-                if (dto?.Token == null) return BadRequest(new { success = false, message = "Token inválido." });
-
-                var raw = _protector.Unprotect(dto.Token);
-                var parts = raw.Split('|');
-                if (parts.Length != 3) return BadRequest(new { success = false, message = "Token inválido." });
-
-                var cdsistema = (parts[0] ?? "").Trim().ToUpper();
-                var cdfuncao = (parts[1] ?? "").Trim().ToUpper();
-                var nmbotao = (parts[2] ?? "").Trim().ToUpper();
-
-                var entity = await _context.Btfuncao.FindAsync(cdsistema, cdfuncao, nmbotao);
-                if (entity == null) return Json(new { success = false, message = "Registro não encontrado." });
-
-                _context.Btfuncao.Remove(entity);
-                await _context.SaveChangesAsync();
-
-                return Json(new { success = true });
-            }
-            catch (DbUpdateException ex)
-            {
-                return Json(new { success = false, message = HandleDbUpdateException(ex) });
-            }
-            catch (Exception)
-            {
-                return Json(new { success = false, message = "Erro ao excluir registro." });
-            }
-        }
-
-        // AJAX: Funções por Sistema (combo dependente)
-        // GET: /SEG/Btfuncao/GetFuncoesBySistema?cdsistema=ERP
+        // Opcional: endpoint para combos dependentes (Funções por Sistema)
         [HttpGet]
-        public async Task<IActionResult> GetFuncoesBySistema(string cdsistema)
+        public async Task<IActionResult> GetFuncoesBySistema(int cdsistema)
         {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(cdsistema))
-                    return Json(Array.Empty<object>());
+            var funcoes = await _db.Fucn1
+                .Where(f => f.Cdsistema == cdsistema)
+                .OrderBy(f => f.Dcfuncao)
+                .Select(f => new SelectListItem
+                {
+                    Value = f.Cdfuncao.ToString(),
+                    Text = f.Dcfuncao
+                })
+                .ToListAsync();
 
-                var sis = cdsistema.Trim().ToUpper();
-
-                var funcoes = await _context.Fucn1
-                    .AsNoTracking()
-                    .Where(f => f.CdSistema.Trim().ToUpper() == sis)
-                    .OrderBy(f => f.CdFuncao)
-                    .Select(f => new
-                    {
-                        value = f.CdFuncao,
-                        text = string.IsNullOrWhiteSpace(f.DcFuncao)
-                                ? f.CdFuncao
-                                : $"{f.CdFuncao} - {f.DcFuncao}"
-                    })
-                    .ToListAsync();
-
-                return Json(funcoes);
-            }
-            catch
-            {
-                return StatusCode(500, new { error = "Erro ao carregar funções." });
-            }
+            return Json(funcoes);
         }
 
-
-        // ------------ Helpers ------------
-
-        private static void Normalizar(Btfuncao m)
+        #region Helpers
+        private async Task CarregarCombosAsync(int? cdsistemaSelecionado = null)
         {
-            m.Cdsistema = (m.Cdsistema ?? "").Trim().ToUpper();
-            m.Cdfuncao = (m.Cdfuncao ?? "").Trim().ToUpper();
-            m.Nmbotao = (m.Nmbotao ?? "").Trim().ToUpper();
-
-            m.Dcbotao = (m.Dcbotao ?? "").Trim();
-            m.Cdacao = (m.Cdacao ?? "").Trim().ToUpper();
-        }
-
-        private async Task PopularSelectsAsync(string? cdsistema, string? cdfuncao)
-        {
-            // Sistemas ATIVOS
-            var sistemas = await _context.Tsistema
-                .AsNoTracking()
-                .Where(s => s.Ativo)
-                .OrderBy(s => s.Cdsistema)
+            // Sistemas
+            var sistemas = await _db.Tsistema
+                .OrderBy(s => s.Dcsistema)
                 .Select(s => new SelectListItem
                 {
-                    Value = s.Cdsistema.Trim().ToUpper(),
-                    Text = $"{s.Cdsistema.Trim().ToUpper()} - {s.Dcsistema}"
+                    Value = s.Cdsistema.ToString(),
+                    Text = s.Dcsistema
                 })
                 .ToListAsync();
 
             ViewData["Sistemas"] = sistemas;
 
-            // Funções (se já há sistema selecionado)
-            IEnumerable<SelectListItem> funcoes = Enumerable.Empty<SelectListItem>();
-            var sis = (cdsistema ?? "").Trim().ToUpper();
-            if (!string.IsNullOrWhiteSpace(sis))
+            // Funções (se houver sistema selecionado)
+            var funcoes = Enumerable.Empty<SelectListItem>();
+            if (cdsistemaSelecionado.HasValue)
             {
-                funcoes = await _context.Fucn1
-                    .AsNoTracking()
-                    .Where(f => f.CdSistema.Trim().ToUpper() == sis)
-                    .OrderBy(f => f.CdFuncao)
+                funcoes = await _db.Fucn1
+                    .Where(f => f.Cdsistema == cdsistemaSelecionado.Value)
+                    .OrderBy(f => f.Dcfuncao)
                     .Select(f => new SelectListItem
                     {
-                        Value = f.CdFuncao,
-                        Text = string.IsNullOrWhiteSpace(f.DcFuncao)
-                               ? f.CdFuncao
-                               : $"{f.CdFuncao} - {f.DcFuncao}",
-                        Selected = f.CdFuncao.Trim().ToUpper() == (cdfuncao ?? "").Trim().ToUpper()
+                        Value = f.Cdfuncao.ToString(),
+                        Text = f.Dcfuncao
                     })
                     .ToListAsync();
             }
             ViewData["Funcoes"] = funcoes;
 
-            // Opcional: lista de ações válidas (se quiser um select para Cdacao)
-            ViewData["Acoes"] = new List<SelectListItem>
+            // Ações possíveis do botão (se sua tabela tiver)
+            // Ajuste se existir uma tabela/enum de ações
+            ViewData["Acoes"] = new[]
             {
-                new("Criar (C)", "C"),
-                new("Ler (R)",   "R"),
-                new("Atualizar (U)", "U"),
-                new("Excluir (D)", "D")
+                new SelectListItem { Value = "VISUALIZAR", Text = "Visualizar" },
+                new SelectListItem { Value = "CRIAR",      Text = "Criar"      },
+                new SelectListItem { Value = "EDITAR",     Text = "Editar"     },
+                new SelectListItem { Value = "EXCLUIR",    Text = "Excluir"    }
             };
         }
-
-        private static string HandleDbUpdateException(DbUpdateException ex)
-        {
-            if (ex.InnerException is SqlException sql)
-            {
-                return sql.Number switch
-                {
-                    547 => "Não é possível excluir/alterar: existem registros dependentes.",
-                    2601 or 2627 => "Registro duplicado (chave única).",
-                    _ => "Erro de banco de dados."
-                };
-            }
-            return "Erro ao persistir alterações.";
-        }
+        #endregion
     }
 }

@@ -1,13 +1,51 @@
+@using System.Text.Json
+@using RhSensoWeb.Helpers
+
 @{
     ViewBag.Areas = "SEG";
     ViewBag.Views = "Constantes";
-    ViewBag.Controller = "Constantes";
+    ViewBag.Controller = "Usuario";
     ViewBag.HabilitaBtnNovo = true;
     ViewBag.HabilitaBtnExportar = true;
-    ViewBag.gridName = "#gridUsuario";    
-    ViewBag.Title = "Constantes";
+    ViewBag.gridName = "#gridUsuario";
+    ViewBag.Title = "Usuários";
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    //
+}
+
+
+@{
+    var acts = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_USUARIOS");
+    ViewBag.iHabilitaBtnNovo = acts.Contains("I");
+    ViewBag.iCanDelete = acts.Contains("E");
+    ViewBag.iCanEdit = acts.Contains("A");
+    ViewBag.iCanExport = acts.Contains("X");
+    // ViewBag.HabilitaBtnExportar = acts.Contains("C");
+
+    var perms = new
+    {
+        canDelete = acts.Contains("E"),
+        canEdit = acts.Contains("A")
+    };
+
+}
+
+
+@{
+    // URLs da action Create
+    var icreateGet = Url.Action("Create", "Usuario", new { area = "SEG" });
+    var icreatePost = icreateGet; // se o POST for a mesma rota, reaproveite
+
+    // Parâmetros para o _TopbarSharedGrid
+    ViewBag.aHref = icreateGet;            // fallback de navegação
+    ViewBag.dataContext = "Usuario";           // mesmo "context" do DTUtil.createAjaxDataTable
+    ViewBag.dataTable = "#gridUsuario";      // seletor do DataTable para dar reload após salvar
+    ViewBag.dataUseModal = false;                 // true = abrir no modal; false = navegar
+    ViewBag.dataTitle = "Novo Usuário";       // título do modal
+    ViewBag.dataCreateGet = icreateGet;            // GET que renderiza o formulário (partial quando AJAX)
+    ViewBag.dataCreatePost = icreatePost;           // POST que grava
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
@@ -27,61 +65,141 @@
 @section Scripts {
     <script>
         $(function () {
-          // Criação do DataTable (DTUtil v4). O campo "data" do JSON de GetData deve conter a lista.
+            const perms = @Html.Raw(JsonSerializer.Serialize(perms));
+
+           // Monte o array de ações de acordo com as permissões (sem "Detalhes")
+        const actions = [
+          ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
+          ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
+        ];
+
+
+          // =============================
+          // 1) DataTable (DTUtil v4)
+          // =============================
           DTUtil.createAjaxDataTable({
-            table: '@ViewBag.gridName',
+            table: '#gridUsuario',
             context: 'Usuario',
-            useModal: true,             // tenta editar em modal; cai em fallback se AppModal não existir
-            rowId: 'cdusuario',         // nome do campo ID que vem no JSON
-            tokenField: 'token',        // nome do campo de token para exclusão segura
-            exportName: 'Usuarios',     // título nos arquivos exportados
+            useModal: false,
+            rowId: 'cdusuario',
+            tokenField: 'token', // se a API devolver "token", o handler abaixo faz fallback
+            exportName: 'Usuarios',
 
             routes: {
               list: '/SEG/Usuario/GetData',
+              createGet: '/SEG/Usuario/Create',
+              createPost: '/SEG/Usuario/Create',
               editGet: '/SEG/Usuario/Edit/{id}',
               editPost: '/SEG/Usuario/Edit/{id}',
               deletePost: '/SEG/Usuario/DeleteByToken',
-              deleteBatchPost: '/SEG/Usuario/DeleteBatch', // opcional; se ausente, o DTUtil faz fallback 1-a-1
+              deleteBatchPost: '/SEG/Usuario/DeleteBatch',
               updateAtivoPost: '/SEG/Usuario/UpdateAtivo'
-              // detailsGet: '/SEG/Usuario/Details/{id}'    // se existir
             },
 
-            // Colunas centrais (a 1ª é checkbox e a última são ações — geradas automaticamente pelo DTUtil)
+            // Colunas (a 1ª = seleção; a última = ações são geradas pelo DTUtil)
             fields: [
               { data: 'cdusuario', title: 'Código', width: '120px' },
               { data: 'dcusuario', title: 'Nome' },
-              { data: 'email_usuario', title: 'Email', defaultContent: '' }, // <- evita warning se vier null
-              { data: 'tipo_desc', title: 'Tipo', defaultContent: '' }, // <- evita warning se vier null
-              { type: 'toggle', data: 'ativo', title: 'Ativo' } // envia POST x-www-form-urlencoded para UpdateAtivo
+              { data: 'email_usuario', title: 'Email', defaultContent: '' },
+              { data: 'tipo_desc', title: 'Tipo', defaultContent: '' },
+              { type: 'toggle', data: 'ativo', title: 'Ativo' }
             ],
 
-            // Ações dinâmicas (podem ser estendidas sem editar o JS)
-            actions: [
-              { name: 'edit',   icon: 'fa-pen',         class: 'btn-outline-primary',   title: 'Editar'  },
-              { name: 'delete', icon: 'fa-trash',       class: 'btn-outline-danger',    title: 'Excluir' }              
-            ]
+            actions: actions
+
           });
 
-          // (Opcional) Handler específico para delete — os fallbacks já funcionam sem isto
+          // ==========================================
+          // 2) "Selecionar todos" (só 1ª coluna)
+          //    -> NÃO afeta o switch "Ativo"
+          // ==========================================
+          const $table = $('#gridUsuario');
+
+          // Atualiza estado (checked/indeterminate) do checkbox do cabeçalho
+          function updateHeaderState() {
+            const $rowChecks = $table.find('tbody td:first-child input.dt-row-select[type=checkbox]');
+            const $headCheck = $table.find('thead .check-all');
+            const total = $rowChecks.length;
+            const marc  = $rowChecks.filter(':checked').length;
+
+            if (!total) {
+              $headCheck.prop('checked', false).prop('indeterminate', false);
+              return;
+            }
+            $headCheck.prop('checked', marc > 0 && marc === total);
+            $headCheck.prop('indeterminate', marc > 0 && marc < total);
+          }
+
+          // Insere o checkbox no 1º <th> quando o DataTable inicializa
+          $table.on('init.dt', function () {
+            const $th0 = $table.find('thead th').eq(0).addClass('text-center col-select');
+            if (!$th0.find('.check-all').length) {
+              $th0.html('<input type="checkbox" class="form-check-input check-all" title="Selecionar todos">');
+            }
+          });
+
+          // Marcar/desmarcar todas as linhas (APENAS 1ª coluna)
+          $table.on('change', 'thead .check-all', function () {
+            const mark = this.checked;
+            $table
+              .find('tbody td:first-child input.dt-row-select[type=checkbox]')
+              .prop('checked', mark)
+              .trigger('change'); // mantém integração com seleção de linha (se existir)
+            updateHeaderState();
+          });
+
+          // A cada redraw:
+          //  - coloca a classe dt-row-select APENAS nos checkboxes da 1ª coluna
+          //  - recalcula o estado do cabeçalho
+          $table.on('draw.dt', function () {
+            $table
+              .find('tbody td:first-child input[type=checkbox]')
+              .addClass('dt-row-select'); // marcador para diferenciar do switch "Ativo"
+            updateHeaderState();
+          });
+
+          // Quando o usuário marca/desmarca uma linha individualmente => reflete no cabeçalho
+          $table.on('change', 'tbody td:first-child input.dt-row-select[type=checkbox]', updateHeaderState);
+
+          // ==========================================
+          // 3) Ações opcionais (ex.: delete/detail)
+          // ==========================================
           DTUtil.actions.on('Usuario', 'delete', async ({ id, meta, dt, button }) => {
             const row   = dt.row($(button).closest('tr')).data() || {};
-            const token = row?.[meta.tokenField];
+            // fallback para nome do token
+            const token = row?.[meta.tokenField] ?? row?.token ?? row?.deleteToken;
             if (!token) return (window.AppNotifier ? AppNotifier.warn('Token ausente para exclusão.') : alert('Token ausente para exclusão.'));
-            const ok = window.AppModal?.confirm ? await AppModal.confirm('Excluir este registro?') : confirm('Excluir este registro?');
+
+            const ok = window.AppModal?.confirm
+              ? await AppModal.confirm('Excluir este registro?')
+              : confirm('Excluir este registro?');
+
             if (!ok) return;
+
             $.ajax({
               url: meta.routes.deletePost,
               type: 'POST',
               contentType: 'application/json; charset=UTF-8',
               data: JSON.stringify({ token })
-            }).done(() => {
+            })
+            .done(() => {
               window.AppNotifier && AppNotifier.success('Excluído com sucesso.');
               dt.ajax.reload(null, false);
-            }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
+            })
+            .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
-          DTUtil.bindInputSearch('#searchGrid', '#gridUsuario' ); @* linka campo pesquisa com o grid *@
-          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridUsuario', {  reload: true, resetPaging: true  });
+
+          DTUtil.actions.on('Usuario', 'detail', async ({ id/*, meta, dt, button */ }) => {
+            alert('detail ' + id);
+          });
+
+          // ==========================================
+          // 4) Busca / limpeza de busca (já usava)
+          // ==========================================
+          DTUtil.bindInputSearch('#searchGrid', '#gridUsuario');
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridUsuario', { reload: true, resetPaging: true });
         });
     </script>
+
 
 }

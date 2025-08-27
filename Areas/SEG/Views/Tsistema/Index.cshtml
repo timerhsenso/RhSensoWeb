@@ -1,3 +1,4 @@
+@using System.Text.Json
 @using RhSensoWeb.Helpers
 
 @{
@@ -19,8 +20,16 @@
     var acts = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_FM_TSISTEMA");
     ViewBag.iHabilitaBtnNovo = acts.Contains("I");
     ViewBag.iCanDelete = acts.Contains("E");
-    ViewBag.iCanEdit   = acts.Contains("A");
+    ViewBag.iCanEdit = acts.Contains("A");
+    ViewBag.iCanExport = acts.Contains("X");
     // ViewBag.HabilitaBtnExportar = acts.Contains("C");
+
+    var perms = new
+    {
+        canDelete = acts.Contains("E"),
+        canEdit = acts.Contains("A")
+    };
+
 }
 
 
@@ -56,6 +65,15 @@
 @section Scripts {
     <script>
         $(function () {
+            const perms = @Html.Raw(JsonSerializer.Serialize(perms));
+
+           // Monte o array de ações de acordo com as permissões (sem "Detalhes")
+        const actions = [
+          ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
+          ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
+        ];
+
+
           // =============================
           // 1) DataTable (DTUtil v4)
           // =============================
@@ -85,11 +103,8 @@
               { type: 'toggle', data: 'Ativo', title: 'Ativo' }
             ],
 
-            actions: [
-              { name: 'edit',   icon: 'fa-pen',         class: 'btn-outline-primary',   title: 'Editar'  },
-              { name: 'delete', icon: 'fa-trash',       class: 'btn-outline-danger',    title: 'Excluir' },
-              { name: 'detail', icon: 'fa-circle-info', class: 'btn-outline-secondary', title: 'Detalhes' }
-            ]
+            actions: actions
+
           });
 
           // ==========================================

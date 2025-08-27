@@ -18,8 +18,8 @@
     ViewBag.HabilitaBtnMostraCamposAdicionais = true; 
     */
 
-        // 1) Nome do grid
-        var gridName = ViewBag.gridName is string s && !string.IsNullOrWhiteSpace(s) ? s : "#tblDefault";
+    // 1) Nome do grid
+    var gridName = ViewBag.gridName is string s && !string.IsNullOrWhiteSpace(s) ? s : "#tblDefault";
 
 
     // 1) Área: ViewBag.Areas -> rota -> ""
@@ -34,39 +34,35 @@
         (ViewContext.RouteData.Values["controller"] as string) ?? "";
 
 
-    // 4) Flags (duplicidade de HabilitaBtnExportar não atrapalha; o último valor prevalece)
-    var habilitabtnovo = (ViewBag.HabilitaBtnNovo as bool?) ?? true;
-    var showExport = (ViewBag.HabilitaBtnExportar as bool?) ?? true;
-    var showcolumns = (ViewBag.HabilitaBtnMostraCamposAdicionais as bool?) ?? true;
-
-
-
     <!---->
+    @* Habilitação por botão *@
     var aHref = ViewBag.aHref;
+    
+    @* Habilitação por botão *@
     var dataAction = ViewBag.dataAction;
     
+    @* Habilitação por botão *@
     var dataContext = ViewBag.dataContext;
 
-    <!-- o mesmo context usado no DTUtil.createAjaxDataTable -->
+    @* Habilitação por botão *@
     var dataTable = ViewBag.dataTable;
 
-    <!-- seletor do seu DataTable para dar reload após salvar -->
+    @* Habilitação por botão *@
     var dataUseModal = (ViewBag.dataUseModal as bool?) ?? false; 
 
-    <!-- abre no modal -->
+    @* Habilitação por botão *@
     var dataTitle = ViewBag.dataTitle;
 
-    <!-- título do modal (opcional) -->
+    @* Habilitação por botão *@
     var dataCreatePost = ViewBag.dataCreatePost;
 
-}
+    @* Habilitação por botão *@
+    var iHabilitaBtnNovo =  (ViewBag.iHabilitaBtnNovo as bool?) ?? false;
+    var iCanDelete =  (ViewBag.iCanDelete as bool?) ?? false;
+    var iCanEdit =  (ViewBag.iCanEdit as bool?) ?? false;
+    var iCanExport =  (ViewBag.iCanExport as bool?) ?? false;
+    // ViewBag.HabilitaBtnExportar = acts.Contains("C");
 
-@foreach (var item in ViewData)
-{
-      
- // <div>
- //   <strong>@item.Key</strong>: @item.Value
- //  </div>
 }
 
 <!-- Topbar Start -->
@@ -95,7 +91,7 @@
                         
                     @* Botão Novo *@
                         <!---->
-                    @if (habilitabtnovo) {
+                    @if (iHabilitaBtnNovo) {
                             <a class="btn btn-info ms-1"
                             href="@aHref"
                             data-action="btnNewRegistration" @* <!-- Fixo, não mudar --> *@
@@ -111,7 +107,7 @@
                         <!---->
 
                     @* Export dropdown *@
-                    @if (showExport)
+                        @if (iCanExport)
                     {
                         <div class="dropdown">
                             <a href="#" class="btn btn-soft-primary btn-icon" role="button"
@@ -155,9 +151,7 @@
                     }
 
                         <!---->
-
                         <div id="columnButtons"></div>
-
                         <!---->
 
                     <div class="dropdown">
@@ -175,7 +169,7 @@
 
 
                             <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Filtros</a></li>
-
+                            @if (@iCanDelete) {
                             <li>
                                 <a href="#" class="dropdown-item text-danger"
                                    data-bulk="delete"
@@ -183,9 +177,12 @@
                                     <i class="fa fa-trash me-2"></i>Excluir selecionados
                                 </a>
                             </li>
-                            
+                            }
                             <hr />
+
+                    
                             <li><a class="dropdown-item" href="#" id="exportPrint"><i data-lucide="star" class="fs-lg"></i> Adicionar aos Favoritos</a></li>
+                            
                             <li>
                                 <a class="dropdown-item"
                                    href="#"

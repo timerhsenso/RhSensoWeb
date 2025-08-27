@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 
+using RhSensoWeb.Common;
 using RhSensoWeb.Models;                 // Tuse1 (modelo de usuário)
 using RhSensoWeb.Filters;                // RequirePermission
 using RhSensoWeb.Services.Security;      // IRowTokenService
@@ -37,13 +39,13 @@ namespace RhSensoWeb.Areas.SEG.Controllers
 
         // GET: /SEG/Usuario
         [HttpGet]
-        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
+        [RequirePermission("SEG", "SEG_USUARIOS", "C")]
         public IActionResult Index() => View();
 
         // GET: /SEG/Usuario/GetData
         // Retorno esperado pelo DataTables: { data: [...] }
         [HttpGet]
-        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
+        [RequirePermission("SEG", "SEG_USUARIOS", "C")]
         public async Task<IActionResult> GetData()
         {
             var userId = User?.Identity?.Name ?? "anon";
@@ -151,9 +153,24 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> DeleteByToken([FromBody] DeleteByTokenDto dto)
         {
             var userId = User?.Identity?.Name ?? "anon";
-            var resp = await _service.DeleteByTokenAsync(dto.Token, userId);
-            if (!resp.Success) return StatusCode(500, resp);
-            return Ok(new { success = true, message = "Excluído com sucesso." });
+            try
+            {
+                var resp = await _service.DeleteByTokenAsync(dto.Token, userId);
+                if (resp.Success)
+                    return Ok(ApiResponse.Ok("Excluído com sucesso."));
+
+                // mapeia erro conhecido do serviço para mensagem amigável
+                var msg = string.IsNullOrWhiteSpace(resp.Message)
+                    ? "Não foi possível excluir o registro."
+                    : resp.Message;
+
+                return BadRequest(ApiResponse.Fail(msg));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro em DeleteByToken (Usuario). token={Token} user={User}", dto.Token, userId);
+                return StatusCode(500, ApiResponse.Fail("Erro interno ao excluir."));
+            }
         }
 
         // POST: /SEG/Usuario/DeleteBatch
@@ -163,7 +180,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> DeleteBatch([FromBody] DeleteBatchDto dto)
         {
             if (dto?.Tokens == null || dto.Tokens.Count == 0)
-                return BadRequest(new { success = false, message = "Nenhum token informado." });
+                return BadRequest(ApiResponse.Fail("Nenhum token informado."));
 
             var userId = User?.Identity?.Name ?? "anon";
             int ok = 0, fail = 0;
@@ -181,24 +198,54 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 }
             }
 
-            return Ok(new { success = fail == 0, ok, fail });
+            var allOk = fail == 0;
+            var message = allOk
+                ? $"Exclusão concluída. OK {ok}."
+                : $"Exclusão concluída com falhas. OK {ok} | Falhas {fail}.";
+
+            return Ok(new
+            {
+                success = allOk,
+                ok,
+                fail,
+                message
+            });
         }
 
         // ===== Ações padrão (Create/Edit/Delete tradicionais) =====
 
         // GET: /SEG/Usuario/Create
         [HttpGet]
-        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
+        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public IActionResult Create() => View();
 
         // POST: /SEG/Usuario/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
+        [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public async Task<IActionResult> Create([Bind("Cdusuario,Dcusuario,Email_usuario,Tpusuario,Ativo")] Tuse1 usuario)
         {
             var resp = await _service.CreateAsync(usuario, ModelState);
             return Json(resp);
+        }
+
+        // GET: /SEG/Usuario/Edit/{id}
+        // Carrega o formulário de edição no modal (DataTables → AppModal.form)
+        [HttpGet]
+        [RequirePermission("SEG", "SEG_USUARIOS", "A")]
+        public async Task<IActionResult> Edit(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                return BadRequest("Id inválido.");
+
+            var db = HttpContext.RequestServices.GetRequiredService<RhSensoWeb.Data.ApplicationDbContext>();
+            var entity = await db.Tuse1.AsNoTracking()
+                                       .FirstOrDefaultAsync(x => x.Cdusuario == id);
+
+            if (entity is null)
+                return NotFound();
+
+            return View(entity); // retorna a View "Edit"
         }
 
         // POST: /SEG/Usuario/Edit/{id}
@@ -217,9 +264,10 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
-            var entity = await _service.GetByIdAsync(id);
-            if (entity is null) return NotFound();
-            return View(entity);
+            var db = HttpContext.RequestServices.GetRequiredService<RhSensoWeb.Data.ApplicationDbContext>();
+            var usuario = await db.Tuse1.AsNoTracking().FirstOrDefaultAsync(m => m.Cdusuario == id);
+            if (usuario is null) return NotFound();
+            return View(usuario);
         }
 
         // POST: /SEG/Usuario/Delete/{id}
@@ -228,16 +276,20 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
+            var db = HttpContext.RequestServices.GetRequiredService<RhSensoWeb.Data.ApplicationDbContext>();
+
             try
             {
-                var resp = await _service.DeleteByIdAsync(id);
-                if (resp.Success)
+                var usuario = await db.Tuse1.FindAsync(id);
+                if (usuario != null)
                 {
+                    db.Tuse1.Remove(usuario);
+                    await db.SaveChangesAsync();
                     TempData["SuccessMessage"] = "Usuário excluído com sucesso!";
                 }
                 else
                 {
-                    TempData["ErrorMessage"] = resp.Message ?? "Usuário não encontrado.";
+                    TempData["ErrorMessage"] = "Usuário não encontrado.";
                 }
             }
             catch (Exception ex)

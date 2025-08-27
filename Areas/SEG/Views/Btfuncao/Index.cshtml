@@ -1,275 +1,230 @@
+@using System.Text.Json
+@using RhSensoWeb.Helpers
+
 @{
     ViewBag.Areas = "SEG";
-    ViewBag.Views = "Btfuncao";
+    ViewBag.Views = "Constantes";
     ViewBag.Controller = "Btfuncao";
     ViewBag.HabilitaBtnNovo = true;
     ViewBag.HabilitaBtnExportar = true;
-
+    ViewBag.gridName = "#gridBtfuncao";
     ViewBag.Title = "Botões por Função";
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    //
 }
 
-@section styles {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-    <!-- DataTables + Responsive + ColReorder -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
-    <style>
-        [data-page="seg-btfuncao-index"] nav[aria-label="breadcrumb"] {
-            --ins-breadcrumb-divider: "";
-        }
 
-        #tblBtfuncao[role="table"] thead th {
-            font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
-            font-size: 12px;
-            font-weight: 600;
-            color: #676a6c;
-            vertical-align: middle;
-            padding: 4px 8px !important;
-            line-height: 1.1 !important;
-            height: 32px !important;
-        }
+@{
+    var acts = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_USUARIOS");
+    ViewBag.iHabilitaBtnNovo = acts.Contains("I");
+    ViewBag.iCanDelete = acts.Contains("E");
+    ViewBag.iCanEdit = acts.Contains("A");
+    ViewBag.iCanExport = acts.Contains("X");
+    // ViewBag.HabilitaBtnExportar = acts.Contains("C");
 
-        #tblBtfuncao tbody td {
-            padding: 6px 12px;
-            vertical-align: middle;
-            line-height: 1.2;
-        }
+    var perms = new
+    {
+        canDelete = acts.Contains("E"),
+        canEdit = acts.Contains("A")
+    };
 
-        #tblBtfuncao .dt-check {
-            width: 46px;
-            text-align: center;
-        }
-
-        #tblBtfuncao .dt-actions {
-            width: 138px;
-            white-space: nowrap;
-            text-align: center;
-        }
-
-        div.dataTables_paginate {
-            text-align: right !important;
-        }
-
-        .dataTables_paginate .pagination {
-            justify-content: flex-end !important;
-        }
-
-        .visually-hidden {
-            position: absolute !important;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0,0,0,0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        .btn-action {
-            padding: .25rem .5rem;
-        }
-
-        th.no-reorder, td.no-reorder {
-            cursor: default;
-        }
-    </style>
 }
 
-@await Html.PartialAsync("~/Views/Shared/Partials/_ToastContainer.cshtml")
+
+@{
+    // URLs da action Create
+    var icreateGet = Url.Action("Create", "Btfuncao", new { area = "SEG" });
+    var icreatePost = icreateGet; // se o POST for a mesma rota, reaproveite
+
+    // Parâmetros para o _TopbarSharedGrid
+    ViewBag.aHref = icreateGet;            // fallback de navegação
+    ViewBag.dataContext = "Btfuncao";           // mesmo "context" do DTUtil.createAjaxDataTable
+    ViewBag.dataTable = "#gridBtfuncao";      // seletor do DataTable para dar reload após salvar
+    ViewBag.dataUseModal = true;                 // true = abrir no modal; false = navegar
+    ViewBag.dataTitle = "Novo Botão por Função";       // título do modal
+    ViewBag.dataCreateGet = icreateGet;            // GET que renderiza o formulário (partial quando AJAX)
+    ViewBag.dataCreatePost = icreatePost;           // POST que grava
+}
+
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
 
-<main data-page="seg-btfuncao-index" class="container-fluid">
-    <div class="row mb-2">
-        <div class="col-lg-12">
-            <form class="bg-light-subtle rounded border p-2" role="search" aria-label="Busca e grade de botões por função">
-                <div class="card-body mb-2"></div>
-
-                <table id="tblBtfuncao" class="table table-striped table-bordered w-100" role="table" aria-describedby="tbl-help">
-                    <caption id="tbl-help" class="visually-hidden">Tabela de botões por função com busca, seleção e ações.</caption>
-                    <thead>
-                        <tr>
-                            <th class="dt-check no-reorder">
-                                <div class="form-check m-0">
-                                    <input class="form-check-input" type="checkbox" id="checkAll" title="Selecionar todos" aria-label="Selecionar todos" />
-                                </div>
-                            </th>
-                            <th>Sistema</th>
-                            <th>Função</th>
-                            <th>Botão</th>
-                            <th>Descrição</th>
-                            <th>Ação</th>
-                            <th class="dt-actions no-reorder">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-
-                <div class="mt-2 d-flex gap-2">
-                    <button id="btnExcluirSelecionados" type="button" class="btn btn-outline-danger">
-                        <i class="fa fa-trash me-1"></i> Excluir Selecionados
-                    </button>
-                    <a asp-area="SEG" asp-controller="Btfuncao" asp-action="Create" class="btn btn-primary">
-                        <i class="fa fa-plus me-1"></i> Novo
-                    </a>
-                </div>
-            </form>
-        </div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <table id="gridBtfuncao" class="table table-striped table-hover w-100"></table>
     </div>
-</main>
+</div>
 
-<form id="__ajaxAntiForgery" class="d-none">@Html.AntiForgeryToken()</form>
+@* Observação:
+   Os partials de modal (_FormModal.cshtml e _ConfirmModal.cshtml) devem estar inclusos UMA VEZ no layout (_VerticalLayout),
+   antes dos scripts do rodapé. Se não estiverem, o DTUtil cai em fallback de navegação (sem modal). *@
 
-@section scripts {
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- DataTables + Responsive + ColReorder -->
-    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
+@section Scripts {
     <script>
-        (function(){
-            const $tbl = $('#tblBtfuncao');
+        $(function () {
+            const perms = @Html.Raw(JsonSerializer.Serialize(perms));
 
-            const dt = $tbl.DataTable({
-                processing: true,
-                serverSide: false,
-                responsive: true,
-                stateSave: true,
-                autoWidth: false,
-                dom: 'rt<"row mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-                ajax: {
-                    url: '@Url.Action("GetData", "Btfuncao", new { area = "SEG" })',
-                    type: 'GET',
-                    cache: false,
-                    dataSrc: function(json){
-                        if(json && json.error){
-                            window.showToast?.({ title:'Erro', message: json.error, variant:'danger' });
-                            return [];
-                        }
-                        return Array.isArray(json) ? json : (json.data || []);
-                    }
-                },
-                columns: [
-                    { // checkbox (travada para reorder)
-                        data: null, orderable:false, searchable:false, className:'dt-check no-reorder',
-                        render: function(data,type,row){
-                            const s=(row?.cdsistema||'').trim(), f=(row?.cdfuncao||'').trim(), b=(row?.nmbotao||'').trim();
-                            return `<div class="form-check m-0">
-                                        <input class="form-check-input row-check" type="checkbox" value="${s}|${f}|${b}" aria-label="Selecionar linha">
-                                    </div>`;
-                        }
-                    },
-                    { data:'cdsistema' },
-                    { data:'cdfuncao' },
-                    { data:'nmbotao'  },
-                    { data:'dcbotao'  },
-                    { data:'cdacao'   },
-                    { // ações (travada para reorder)
-                        data: null, orderable:false, searchable:false, className:'dt-actions no-reorder',
-                        render: function(data,type,row){
-                            const s=encodeURIComponent((row?.cdsistema||'').trim());
-                            const f=encodeURIComponent((row?.cdfuncao ||'').trim());
-                            const b=encodeURIComponent((row?.nmbotao  ||'').trim());
-                            const token=row?.deleteToken||'';
-                            const editHref='@Url.Action("Edit", "Btfuncao", new { area = "SEG" })' + `?cdsistema=${s}&cdfuncao=${f}&nmbotao=${b}`;
+           // Monte o array de ações de acordo com as permissões (sem "Detalhes")
+        const actions = [
+          ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
+          ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
+        ];
 
-                            return `
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Ações da linha">
-                                <a class="btn btn-success btn-action" href="${editHref}" aria-label="Editar">
-                                    <i class="fa fa-pen"></i><span class="visually-hidden"> Editar</span>
-                                </a>
-                                <button type="button" class="btn btn-danger btn-action js-del-one"
-                                        data-token="${token}" data-s="${s}" data-f="${f}" data-b="${b}"
-                                        aria-label="Excluir">
-                                    <i class="fa fa-trash"></i><span class="visually-hidden"> Excluir</span>
-                                </button>
-                            </div>`;
-                        }
-                    }
-                ],
-                order: [[1,'asc'],[2,'asc'],[3,'asc']],
-                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json' },
-                colReorder: { fixedColumnsLeft: 1, fixedColumnsRight: 1 },
-                columnDefs: [ { targets: [0, 6], className: 'no-reorder' } ]
-            });
 
-            window.dataTable = dt;
+          // =============================
+          // 1) DataTable (DTUtil v4)
+          // =============================
+          DTUtil.createAjaxDataTable({
+            table: '#gridBtfuncao',
+            context: 'Btfuncao',
+            useModal: false,
+            rowId: 'cdsistema', // Pode ser composto se necessário
+            tokenField: 'deleteToken', // se a API devolver "token", o handler abaixo faz fallback
+            exportName: 'BotoesPorFuncao',
 
-            // Busca externa (TopBar)
-            const $search = $('#tableSearch'), $clear = $('#clearSearch');
-            $search.on('input', function(){
-                $clear.toggleClass('show', this.value.length>0);
-                dt.search(this.value).draw();
-            });
-            $clear.on('click', function(){ $search.val('').trigger('input').focus(); });
+            routes: {
+              list: '/SEG/Btfuncao/GetData',
+              createGet: '/SEG/Btfuncao/Create',
+              createPost: '/SEG/Btfuncao/Create',
+              editGet: '/SEG/Btfuncao/Edit?cdsistema={cdsistema}&cdfuncao={cdfuncao}&nmbotao={nmbotao}',
+              editPost: '/SEG/Btfuncao/Edit',
+              deletePost: '/SEG/Btfuncao/DeleteByToken',
+              deleteBatchPost: '/SEG/Btfuncao/DeleteBatch'
+            },
 
-            // Selecionar todos
-            $('#checkAll').on('change', function(){
-                const checked = this.checked;
-                $('.row-check', dt.rows({page:'current'}).nodes()).prop('checked', checked);
-            });
-            dt.on('draw', function(){ $('#checkAll').prop('checked', false); });
+            // Colunas (a 1ª = seleção; a última = ações são geradas pelo DTUtil)
+            fields: [
+              { data: 'cdsistema', title: 'Sistema', width: '120px' },
+              { data: 'cdfuncao', title: 'Função', width: '120px' },
+              { data: 'nmbotao', title: 'Botão', width: '120px' },
+              { data: 'dcbotao', title: 'Descrição' },
+              { data: 'cdacao', title: 'Ação', width: '80px' }
+            ],
 
-            function anti(){
-                return document.querySelector('#__ajaxAntiForgery input[name="__RequestVerificationToken"]')?.value || '';
+            actions: actions
+
+          });
+
+          // ==========================================
+          // 2) "Selecionar todos" (só 1ª coluna)
+          //    -> NÃO afeta o switch "Ativo"
+          // ==========================================
+          const $table = $('#gridBtfuncao');
+
+          // Atualiza estado (checked/indeterminate) do checkbox do cabeçalho
+          function updateHeaderState() {
+            const $rowChecks = $table.find('tbody td:first-child input.dt-row-select[type=checkbox]');
+            const $headCheck = $table.find('thead .check-all');
+            const total = $rowChecks.length;
+            const marc  = $rowChecks.filter(':checked').length;
+
+            if (!total) {
+              $headCheck.prop('checked', false).prop('indeterminate', false);
+              return;
             }
+            $headCheck.prop('checked', marc > 0 && marc === total);
+            $headCheck.prop('indeterminate', marc > 0 && marc < total);
+          }
 
-            // Excluir 1
-            $(document).on('click', '.js-del-one', async function(e){
-                e.preventDefault();
-                const token = this.dataset.token || '';
-                const s = this.dataset.s || '', f = this.dataset.f || '', b = this.dataset.b || '';
-                if(!confirm('Confirma excluir este registro?')) return;
+          // Insere o checkbox no 1º <th> quando o DataTable inicializa
+          $table.on('init.dt', function () {
+            const $th0 = $table.find('thead th').eq(0).addClass('text-center col-select');
+            if (!$th0.find('.check-all').length) {
+              $th0.html('<input type="checkbox" class="form-check-input check-all" title="Selecionar todos">');
+            }
+          });
 
-                const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti() };
-                let url, opts;
+          // Marcar/desmarcar todas as linhas (APENAS 1ª coluna)
+          $table.on('change', 'thead .check-all', function () {
+            const mark = this.checked;
+            $table
+              .find('tbody td:first-child input.dt-row-select[type=checkbox]')
+              .prop('checked', mark)
+              .trigger('change'); // mantém integração com seleção de linha (se existir)
+            updateHeaderState();
+          });
 
-                if(token){
-                    url = '@Url.Action("DeleteByToken", "Btfuncao", new { area = "SEG" })';
-                    opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/json; charset=utf-8' }, body: JSON.stringify({ token }) };
-                }else{
-                    url = '@Url.Action("Delete", "Btfuncao", new { area = "SEG" })';
-                    const body = new URLSearchParams({ cdsistema: s, cdfuncao: f, nmbotao:b });
-                    opts = { method:'POST', headers:{ ...headers, 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' }, body };
-                }
+          // A cada redraw:
+          //  - coloca a classe dt-row-select APENAS nos checkboxes da 1ª coluna
+          //  - recalcula o estado do cabeçalho
+          $table.on('draw.dt', function () {
+            $table
+              .find('tbody td:first-child input[type=checkbox]')
+              .addClass('dt-row-select'); // marcador para diferenciar do switch "Ativo"
+            updateHeaderState();
+          });
 
-                try{
-                    const res = await fetch(url, opts);
-                    const json = await res.json().catch(()=> ({}));
-                    if(!res.ok || json?.success === false) throw new Error(json?.message || `Falha ao excluir (HTTP ${res.status})`);
-                    window.showToast?.({ title:'Sucesso', message:'Registro excluído com sucesso.', variant:'success' });
-                    dt.ajax.reload(null,false);
-                }catch(err){
-                    window.showToast?.({ title:'Erro', message: err?.message || 'Erro ao excluir.', variant:'danger' });
-                }
-            });
+          // Quando o usuário marca/desmarca uma linha individualmente => reflete no cabeçalho
+          $table.on('change', 'tbody td:first-child input.dt-row-select[type=checkbox]', updateHeaderState);
 
-            // Excluir em massa
-            $('#btnExcluirSelecionados').on('click', async function(e){
-                e.preventDefault();
-                const ids = $('.row-check:checked', dt.rows({page:'current'}).nodes()).map((_,el)=>String(el.value||'')).get();
-                if(!ids.length){ window.showToast?.({ title:'Atenção', message:'Selecione ao menos um registro.', variant:'warning' }); return; }
-                if(!confirm(`Excluir ${ids.length} registro(s)?`)) return;
+          // ==========================================
+          // 3) Ações opcionais (ex.: delete/detail)
+          // ==========================================
+          DTUtil.actions.on('Btfuncao', 'delete', async ({ id, meta, dt, button }) => {
+            const row   = dt.row($(button).closest('tr')).data() || {};
+            // fallback para nome do token
+            const token = row?.[meta.tokenField] ?? row?.token ?? row?.deleteToken;
+            if (!token) return (window.AppNotifier ? AppNotifier.warn('Token ausente para exclusão.') : alert('Token ausente para exclusão.'));
 
-                const headers = { 'X-Requested-With':'XMLHttpRequest', 'RequestVerificationToken': anti(), 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' };
-                let ok=0, fail=0, lastErr='';
-                for(const id of ids){
-                    const [s,f,b] = id.split('|');
-                    try{
-                        const body = new URLSearchParams({ cdsistema:s, cdfuncao:f, nmbotao:b });
-                        const res = await fetch('@Url.Action("Delete", "Btfuncao", new { area = "SEG" })', { method:'POST', headers, body });
-                        if(!res.ok){ lastErr = await res.text().catch(()=> ''); fail++; } else ok++;
-                    }catch(ex){ fail++; lastErr = ex?.message || 'Erro'; }
-                }
-                dt.ajax.reload(null,false);
-                if(fail===0) window.showToast?.({title:'Sucesso', message:`${ok} registro(s) excluído(s).`, variant:'success'});
-                else if(ok===0) window.showToast?.({title:'Erro', message:`Nenhum excluído. ${lastErr}`, variant:'danger'});
-                else window.showToast?.({title:'Parcial', message:`Excluídos: ${ok} • Falhas: ${fail}`, variant:'warning'});
-            });
-        })();
+            const ok = window.AppModal?.confirm
+              ? await AppModal.confirm('Excluir este registro?')
+              : confirm('Excluir este registro?');
+
+            if (!ok) return;
+
+            $.ajax({
+              url: meta.routes.deletePost,
+              type: 'POST',
+              contentType: 'application/json; charset=UTF-8',
+              data: JSON.stringify({ token })
+            })
+            .done(() => {
+              window.AppNotifier && AppNotifier.success('Excluído com sucesso.');
+              dt.ajax.reload(null, false);
+            })
+            .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
+          });
+
+          DTUtil.actions.on('Btfuncao', 'edit', async ({ id, meta, dt, button }) => {
+            const row = dt.row($(button).closest('tr')).data() || {};
+            const cdsistema = encodeURIComponent(row.cdsistema || '');
+            const cdfuncao = encodeURIComponent(row.cdfuncao || '');
+            const nmbotao = encodeURIComponent(row.nmbotao || '');
+
+            const editUrl = `/SEG/Btfuncao/Edit?cdsistema=${cdsistema}&cdfuncao=${cdfuncao}&nmbotao=${nmbotao}`;
+
+            if (window.AppModal && meta.useModal) {
+              try {
+                const response = await fetch(editUrl);
+                const html = await response.text();
+                AppModal.form({
+                  title: 'Editar Botão por Função',
+                  body: html,
+                  submitUrl: '/SEG/Btfuncao/Edit',
+                  onSuccess: () => dt.ajax.reload(null, false)
+                });
+              } catch (ex) {
+                window.location.href = editUrl;
+              }
+            } else {
+              window.location.href = editUrl;
+            }
+          });
+
+          DTUtil.actions.on('Btfuncao', 'detail', async ({ id/*, meta, dt, button */ }) => {
+            alert('detail ' + id);
+          });
+
+          // ==========================================
+          // 4) Busca / limpeza de busca (já usava)
+          // ==========================================
+          DTUtil.bindInputSearch('#searchGrid', '#gridBtfuncao');
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridBtfuncao', { reload: true, resetPaging: true });
+        });
     </script>
+
+
 }
