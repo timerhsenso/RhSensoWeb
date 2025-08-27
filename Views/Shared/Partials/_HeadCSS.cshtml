@@ -11,3 +11,54 @@
 @* Ícones e toasts *@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 <link rel="stylesheet" href="~/css/app-notifier.css" asp-append-version="true" />
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+
+
+<style>
+    /* Ajusta o info box do DataTables Buttons no dark mode */
+    div.dt-button-info {
+        background: #111; /* ou var(--bs-body-bg) */
+        color: #fff; /* ou var(--bs-body-color) */
+        border: 1px solid rgba(255,255,255,.15);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.5);
+    }
+
+        div.dt-button-info h2 {
+            color: inherit;
+            border-bottom: 1px solid rgba(255,255,255,.15);
+        }
+
+
+    /* Deixe o dropdown do Choices visível sobre a modal, sem puxar scroll */
+    #colVisModal .modal-content,
+    #colVisModal .modal-body {
+        overflow: visible !important;
+    }
+
+    #colVisModal .choices {
+        width: 100%;
+    }
+
+    #colVisModal .choices__inner {
+        min-height: 44px;
+    }
+
+    /* Dropdown do Choices sobre a modal (z-index alto e largura 100%) */
+    #colVisModal .choices__list--dropdown,
+    #colVisModal .choices__list[aria-expanded] {
+        position: absolute;
+        z-index: 1085; /* acima de conteúdo da modal */
+        width: 100%;
+        max-height: 280px; /* altura máxima do menu */
+        overflow-y: auto; /* scroll no dropdown, não na modal */
+        background: var(--bs-body-bg);
+        color: var(--bs-body-color);
+        border: 1px solid rgba(0,0,0,.1);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    }
+
+
+</style>

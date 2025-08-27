@@ -1,3 +1,5 @@
+@using System.Text.Json
+@using RhSensoWeb.Helpers
 
 @{
     ViewBag.Areas = "SEG";
@@ -6,9 +8,44 @@
     ViewBag.HabilitaBtnNovo = true;
     ViewBag.HabilitaBtnExportar = true;
     ViewBag.gridName = "#gridConstantes";
-    ViewBag.Title = "Constantes";
+    ViewBag.Title = "Tabela de Constantes";
     ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    //
+}
+
+
+@{
+    var acts = PermissionAccessHelper.GetActions(Context, "SEG", "SEG_FM_TSISTEMA");
+    ViewBag.iHabilitaBtnNovo = acts.Contains("I");
+    ViewBag.iCanDelete = acts.Contains("E");
+    ViewBag.iCanEdit = acts.Contains("A");
+    ViewBag.iCanExport = acts.Contains("C");
+    // ViewBag.HabilitaBtnExportar = acts.Contains("C");
+
+    var perms = new
+    {
+        canDelete = acts.Contains("E"),
+        canEdit = acts.Contains("A")
+    };
+
+}
+
+
+@{
+    // URLs da action Create
+    var icreateGet = Url.Action("Create", "Constantes", new { area = "SEG" });
+    var icreatePost = icreateGet; // se o POST for a mesma rota, reaproveite
+
+    // Parâmetros para o _TopbarSharedGrid
+    ViewBag.aHref = icreateGet;            // fallback de navegação
+    ViewBag.dataContext = "Constantes";           // mesmo "context" do DTUtil.createAjaxDataTable
+    ViewBag.dataTable = "#gridConstantes";      // seletor do DataTable para dar reload após salvar
+    ViewBag.dataUseModal = true;                 // true = abrir no modal; false = navegar
+    ViewBag.dataTitle = "Nova Constante";       // título do modal
+    ViewBag.dataCreateGet = icreateGet;            // GET que renderiza o formulário (partial quando AJAX)
+    ViewBag.dataCreatePost = icreatePost;           // POST que grava
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
@@ -109,8 +146,11 @@
             }).fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
 
-          DTUtil.bindInputSearch('#btnPesquisaDT', gridSelector);
+          DTUtil.bindInputSearch('#searchGrid', '#gridConstantes');
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridConstantes', { reload: true, resetPaging: true });
         });
     </script>
+    
+
 }
 

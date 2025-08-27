@@ -149,10 +149,7 @@
                         </div>
 
                     }
-
-                        <!---->
-                        <div id="columnButtons"></div>
-                        <!---->
+                                    
 
                     <div class="dropdown">
                         <a href="#" class="btn btn-soft-primary btn-icon" role="button"
@@ -167,6 +164,15 @@
                                 </a>
                             </li>
 
+                            <li>
+                                <a class="dropdown-item"
+                                   href="#"
+                                   data-bs-toggle="modal"
+                                   data-bs-target="#colVisModal"
+                                   data-table="@gridName">                                    
+                                    <i class="fa-solid fa-table-columns me-2"></i> Colunas…
+                                </a>
+                            </li>
 
                             <li><a class="dropdown-item" href="#" id="btnRecarregar"><i class="fa fa-file-csv text-info me-2"></i>Filtros</a></li>
                             @if (@iCanDelete) {
@@ -201,7 +207,5 @@
         </div>
     </div>
 <!-- Topbar End -->
-
-
 
 

@@ -1,34 +1,49 @@
+@* /Areas/SEG/Views/Constantes/Create.cshtml *@
 @model RhSensoWeb.Models.Const1
 @{
-    ViewData["Title"] = "Nova Constante";
-    ViewData["SubTitle"] = "Segurança";
+    ViewBag.Title = "Nova Constante";
+    ViewBag.SubTitle = "Segurança";
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+
+    // Detecta se a view está sendo carregada em modal (AJAX)
+    var req = ViewContext?.HttpContext?.Request;
+    var isModal =
+        (req?.Query["modal"].ToString() == "1") ||
+        string.Equals(req?.Headers["X-Requested-With"].ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+    if (isModal) { Layout = null; } // em modal não usamos o layout
+}
+
+@if (!isModal)
+{
+    <div class="container-fluid">
+        <h4 class="mb-3">@ViewBag.Title</h4>
+    </div>
 }
 
 <div class="container-fluid">
-    <h4 class="mb-3">@ViewData["Title"]</h4>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-    <div asp-validation-summary="All" class="alert alert-danger @(!ViewData.ModelState.IsValid ? "" : "d-none")"></div>
-
-    <form asp-action="Create" method="post" class="card">
+    <form asp-area="SEG"
+          asp-controller="Constantes"
+          asp-action="Create"
+          method="post" autocomplete="off" novalidate>
         @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Id" />
 
-        <div class="card-body">
-            @await Html.PartialAsync("_FormFields", Model)
-        </div>
+        @await Html.PartialAsync("_FormFields", Model, new ViewDataDictionary(ViewData) { ["IsEdit"] = false })
 
-        <div class="card-footer d-flex gap-2">
-            <a asp-action="Index" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Voltar
-            </a>
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save me-1"></i> Salvar
-            </button>
+        <div class="mt-3 d-flex gap-2">
+            @if (!isModal)
+            {
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa fa-save"></i> Salvar
+                </button>
+                <a asp-area="SEG" asp-controller="Constantes" asp-action="Index" class="btn btn-secondary">
+                    Cancelar
+                </a>
+            }
+            @* Quando isModal == true, NÃO renderiza botões aqui.
+       O “Salvar/Cancelar” do footer do modal (layout) cuida do submit/fechar *@
         </div>
     </form>
 </div>
-
-@section scripts {
-    <partial name="_ValidationScriptsPartial" />
-}

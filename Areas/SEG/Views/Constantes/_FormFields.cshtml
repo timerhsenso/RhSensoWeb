@@ -1,144 +1,79 @@
-﻿@model RhSensoWeb.Models.Const1
+﻿@* /Areas/SEG/Views/Constantes/_FormFields.cshtml *@
+@model RhSensoWeb.Models.Const1
 @{
-    bool isEdit = ViewContext.RouteData.Values["action"].ToString() == "Edit";
+    // Este partial NÃO deve declarar sections nem layout.
+    // Use ViewData["IsEdit"] (bool) se precisar mudar algo entre Create/Edit.
+    var isEdit = (bool?)ViewData["IsEdit"] == true;
 }
 
-<div class="row g-3">
-    <div class="col-md-4">
-        <label asp-for="Cdconstante" class="form-label">Código *</label>
-        @if (isEdit)
-        {
-            <input asp-for="Cdconstante" class="form-control" readonly />
-        }
-        else
-        {
-            <input asp-for="Cdconstante" class="form-control" />
-        }
-        <span asp-validation-for="Cdconstante" class="text-danger"></span>
-    </div>
+<div class="card">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label asp-for="Cdconstante" class="form-label">Código</label>
+                @if (isEdit)
+                {
+                    <input asp-for="Cdconstante" class="form-control" readonly />
+                }
+                else
+                {
+                    <input asp-for="Cdconstante" class="form-control" />
+                }
+                <span asp-validation-for="Cdconstante" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-8">
-        <label asp-for="Dcconstante" class="form-label">Descriçăo *</label>
-        <input asp-for="Dcconstante" class="form-control" maxlength="255" />
-        <span asp-validation-for="Dcconstante" class="text-danger"></span>
-    </div>
+            <div class="col-md-5">
+                <label asp-for="Dcconstante" class="form-label">Constante</label>
+                <input asp-for="Dcconstante" class="form-control" maxlength="200" />
+                <span asp-validation-for="Dcconstante" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Cdsistema" class="form-label">Sistema *</label>
-        <select asp-for="Cdsistema" asp-items="@(ViewData["Sistemas"] as IEnumerable<SelectListItem>)"
-                class="form-select" id="selSistema" required>
-            <option value="">-- selecione --</option>
-        </select>
-        <span asp-validation-for="Cdsistema" class="text-danger"></span>
-    </div>
+            <div class="col-md-4">
+                <label asp-for="Dcconteudo" class="form-label">Conteúdo</label>
+                <input asp-for="Dcconteudo" class="form-control" maxlength="200" />
+                <span asp-validation-for="Dcconteudo" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Cdfuncao" class="form-label">Funçăo</label>
-        <select asp-for="Cdfuncao" asp-items="@(ViewData["Funcoes"] as IEnumerable<SelectListItem>)"
-                class="form-select" id="selFuncao">
-            <option value="">(sem funçăo)</option>
-        </select>
-        <span asp-validation-for="Cdfuncao" class="text-danger"></span>
-    </div>
+            @* Campos auxiliares que você esconde na grade, mas pode editar aqui *@
+            <div class="col-md-3">
+                <label asp-for="Tpcampo" class="form-label">Tipo Campo</label>
+                <input asp-for="Tpcampo" class="form-control" />
+                <span asp-validation-for="Tpcampo" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Dcconteudo" class="form-label">Conteúdo</label>
-        <input asp-for="Dcconteudo" class="form-control" maxlength="200" />
-        <span asp-validation-for="Dcconteudo" class="text-danger"></span>
-    </div>
+            <div class="col-md-3">
+                <label asp-for="Flalterar" class="form-label">Pode Alterar</label>
+                <select asp-for="Flalterar" class="form-select">
+                    <option value="">Selecione...</option>
+                    <option value="S">Sim</option>
+                    <option value="N">Não</option>
+                </select>
+                <span asp-validation-for="Flalterar" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Tipo" class="form-label">Tipo</label>
-        <select asp-for="Tipo" asp-items="@(ViewData["Tipos"] as IEnumerable<SelectListItem>)"
-                class="form-select">
-            <option value="">-- selecione --</option>
-        </select>
-        <span asp-validation-for="Tipo" class="text-danger"></span>
-    </div>
+            <div class="col-md-3">
+                <label asp-for="Cdsistema" class="form-label">Sistema</label>
+                <input asp-for="Cdsistema" class="form-control" />
+                <span asp-validation-for="Cdsistema" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Tpcampo" class="form-label">Tipo de Campo *</label>
-        <select asp-for="Tpcampo" asp-items="@(ViewData["TpCampo"] as IEnumerable<SelectListItem>)"
-                class="form-select" required>
-            <option value="">-- selecione --</option>
-        </select>
-        <span asp-validation-for="Tpcampo" class="text-danger"></span>
-    </div>
+            <div class="col-md-3">
+                <label asp-for="Cdfuncao" class="form-label">Função</label>
+                <input asp-for="Cdfuncao" class="form-control" />
+                <span asp-validation-for="Cdfuncao" class="text-danger"></span>
+            </div>
 
-    <div class="col-md-4">
-        <label asp-for="Flalterar" class="form-label">Pode Alterar</label>
-        <select asp-for="Flalterar" asp-items="@(ViewData["FlAlterar"] as IEnumerable<SelectListItem>)"
-                class="form-select">
-            <option value="">-- selecione --</option>
-        </select>
-        <span asp-validation-for="Flalterar" class="text-danger"></span>
-    </div>
+            <div class="col-md-4">
+                <label asp-for="Tipo" class="form-label">Tipo</label>
+                <input asp-for="Tipo" class="form-control" />
+                <span asp-validation-for="Tipo" class="text-danger"></span>
+            </div>
 
-    <div class="col-12">
-        <label asp-for="Txdescricao" class="form-label">Descriçăo Longa</label>
-        <textarea asp-for="Txdescricao" class="form-control" rows="3" maxlength="4000"></textarea>
-        <span asp-validation-for="Txdescricao" class="text-danger"></span>
-    </div>
-
-    <div class="col-12">
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" asp-for="Config" />
-            <label class="form-check-label" asp-for="Config">Configuraçăo</label>
+            <div class="col-md-8">
+                <label asp-for="Config" class="form-label">Config.</label>
+                <input asp-for="Config" class="form-control" />
+                <span asp-validation-for="Config" class="text-danger"></span>
+            </div>
         </div>
-        <span asp-validation-for="Config" class="text-danger"></span>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const sistemaSelect = document.getElementById('selSistema');
-        const funcaoSelect = document.getElementById('selFuncao');
-
-        if (sistemaSelect && funcaoSelect) {
-            sistemaSelect.addEventListener('change', async function() {
-                await carregarFuncoes(this.value);
-            });
-
-            if (sistemaSelect.value) {
-                carregarFuncoes(sistemaSelect.value, '@Model?.Cdfuncao');
-            }
-        }
-
-        async function carregarFuncoes(cdsistema, valorManter = null) {
-            const select = document.getElementById('selFuncao');
-            if (!select) return;
-
-            try {
-                select.disabled = true;
-
-                if (!cdsistema) {
-                    select.innerHTML = '<option value="">(sem funçăo)</option>';
-                    return;
-                }
-
-                const response = await fetch('@Url.Action("GetFuncoesBySistema", "Constantes", new { area = "SEG" })?cdsistema=' + encodeURIComponent(cdsistema));
-
-                if (!response.ok) throw new Error('Falha ao carregar');
-
-                const funcoes = await response.json();
-                const valorAtual = valorManter || select.value;
-
-                select.innerHTML = '<option value="">(sem funçăo)</option>';
-                funcoes.forEach(f => {
-                    const option = new Option(f.text, f.value);
-                    option.selected = f.value === valorAtual;
-                    select.add(option);
-                });
-
-                if (valorAtual && [...select.options].some(o => o.value === valorAtual)) {
-                    select.value = valorAtual;
-                }
-            } catch (error) {
-                console.error('Erro:', error);
-                select.innerHTML = '<option value="">(sem funçăo)</option>';
-            } finally {
-                select.disabled = false;
-            }
-        }
-    });
-</script>

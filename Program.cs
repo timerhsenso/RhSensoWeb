@@ -125,6 +125,8 @@ namespace RhSensoWeb
 
                 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
+                builder.Services.AddScoped<IBtfuncaoService, BtfuncaoService>();
+
                 // =======================
                 // RATE LIMITER
                 // =======================

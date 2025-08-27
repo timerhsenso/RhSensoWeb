@@ -71,6 +71,63 @@
     @if (Env.EnvironmentName == "Development") { @Html.Raw("<!-- // RenderSection(Scripts, required: false)  Debug // -->") }
     @RenderSection("Scripts", required: false)
 
+    @await Html.PartialAsync("~/Views/Shared/Partials/_ColVisModal.cshtml")
+
+
+    <script type="module">
+        import { initColVis } from '@Url.Content("~/js/colvis.js")';
+
+        const modal  = document.getElementById('colVisModal');
+        const holder = modal.querySelector('#colvis-holder');
+
+        modal.addEventListener('shown.bs.modal', (ev) => {
+          // 1) tenta pegar do botão que abriu
+          let tableSel = ev.relatedTarget?.getAttribute('data-table');
+
+          // 2) se não veio, usa o que ficou salvo na última abertura
+          if (!tableSel) tableSel = modal.dataset.table || null;
+
+          // 3) fallback: detecta a primeira DataTable visível na página
+          if (!tableSel) {
+            const t = document.querySelector('table.dataTable, table[id^="grid"], table[id^="tbl"]');
+            if (t?.id) tableSel = `#${t.id}`;
+          }
+
+          if (!tableSel) {
+            console.warn('ColVis: nenhuma tabela encontrada para o modal.');
+            return;
+          }
+
+          modal.dataset.table = tableSel;         // persiste p/ reabrir
+          holder.innerHTML = '';
+          delete holder.dataset.colvisInitialized;
+
+          initColVis({ table: tableSel, holder, placeholder: 'Colunas visíveis' });
+        });
+
+        document.getElementById('colvis-reset')?.addEventListener('click', () => {
+          const sel = modal.dataset.table;
+          if (!(window.jQuery && sel && jQuery.fn.dataTable.isDataTable(sel))) return;
+          const dt = jQuery(sel).DataTable();
+          dt.columns().visible(true, false);
+          dt.columns.adjust().draw(false);
+
+          const id = dt.settings()[0].sTableId || sel.replace('#','');
+          try { localStorage.removeItem('colvis:' + id); } catch {}
+
+          holder.innerHTML = '';
+          delete holder.dataset.colvisInitialized;
+          initColVis({ table: sel, holder });
+        });
+
+        modal.addEventListener('hidden.bs.modal', () => {
+          holder.innerHTML = '';
+          delete holder.dataset.colvisInitialized;
+        });
+    </script>
+
+
+
 </body>
 
 </html>
