@@ -10,11 +10,11 @@ namespace RhSensoWeb.Middleware
     /// Captura exceções não tratadas no pipeline e retorna uma ApiResponse (HTTP 500).
     /// Mantém detalhes no log (ILogger) e não vaza stack trace para o cliente.
     /// </summary>
-    public sealed class ExceptionHandlingMiddleware : IMiddleware
+    public sealed class _ExceptionHandlingMiddleware : IMiddleware
     {
-        private readonly ILogger<ExceptionHandlingMiddleware> _logger;
+        private readonly ILogger<_ExceptionHandlingMiddleware> _logger;
 
-        public ExceptionHandlingMiddleware(ILogger<ExceptionHandlingMiddleware> logger)
+        public _ExceptionHandlingMiddleware(ILogger<_ExceptionHandlingMiddleware> logger)
         {
             _logger = logger;
         }
@@ -39,7 +39,7 @@ namespace RhSensoWeb.Middleware
                     context.Response.ContentType = "application/json; charset=utf-8";
 
                     // Mantém padrão PascalCase do projeto (PropertyNamingPolicy = null)
-                    var payload = ApiResponse.Fail("Ocorreu um erro interno no servidor.");
+                    var payload = ApiResponse.Fail("Ocorreu um erro interno no servidor01.");
                     var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
                     {
                         PropertyNamingPolicy = null,

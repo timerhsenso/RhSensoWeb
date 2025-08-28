@@ -126,374 +126,101 @@
             </ul>
 
             <li class="side-nav-title" data-lang="menu-title">Menu</li>
-
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarDashboards" aria-expanded="false" aria-controls="sidebarDashboards" class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-layout-dashboard"></i></span>
-                    <span class="menu-text" data-lang="dashboards">Dashboards</span>
-                    <span class="badge bg-success">5</span>
-                </a>
-
-                <div class="collapse" id="sidebar">
-                   
-                    <ul class="sub-menu" id="">
-
-                        <li class="side-nav-item">
-                            
-                            <a asp-area="SEG" asp-controller="Tsistema" asp-action="Index">
-                                <span class="menu-text" data-lang="">Tabela de Sistemas</span>
-                            </a>
-                        </li>
-
-                   </ul>
-
-
-
-                    <ul class="sub-menu">
-
-
-                        <li class="side-nav-item">
-                            teste
-                            <a asp-area="SEG" asp-controller="Tsistema" asp-action="Index">
-                                <span class="menu-text" data-lang="dashboard-one">Tabela de Sistemas</span>
-                            </a>
-                        </li>
-
-
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Index", "Tsistema", new { area = "SEG" }) class="side-nav-link">
-                                <span class="menu-text" data-lang="dashboard-one">Link com @@Url</span>
-                            </a>
-                        </li>
-
-
-                        <!---->
-                        <li class="side-nav-item">
-                            <a href="#!" class="side-nav-link disabled">
-                                <span class="menu-text" data-lang="dashboard-five">Dashboard v.5</span>
-                                <span class="badge text-bg-light opacity-50" data-lang="dashboard-soon">soon</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "Usuario", new { area = "SEG" }) class="side-nav-link">
-            <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">Usuarios</span>
-            </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "UsuarioGrupo", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">UsuarioGrupo</span>
-                </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "GrupoFuncao", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">GrupoFuncao</span>
-                </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "Tsistema", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">Tsistema</span>
-                </a>
-            </li>
-
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "FuncoesSistema", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text"> data-lang=""FuncoesSistema</span>
-                </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "Btfuncao", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">Btfuncao</span>
-                </a>
-            </li>
-            <li class="side-nav-item">
-                <a href=@Url.Action("Index", "Constantes", new { area = "SEG" }) class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
-                    <span class="menu-text" data-lang="">Constantes</span>
-                </a>
-            </li>
-
-            <li class="side-nav-title" data-lang="apps-title">Apps</li>
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarEcommerce" aria-expanded="false" aria-controls="sidebarEcommerce" class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-basket"></i></span>
-                    <span class="menu-text" data-lang="ecommerce">Ecommerce</span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse" id="sidebarEcommerce">
-                    <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a data-bs-toggle="collapse" href="#sidebarProducts" aria-expanded="false" aria-controls="sidebarProducts" class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-products">Products</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <div class="collapse" id="sidebarProducts">
-                                <ul class="sub-menu">
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("Products", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-list">Products</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("ProductsGrid", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-grid">Products Grid</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("ProductDetails", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-details">Product Details</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("AddProduct", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-add">Add Product</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Categories", "Ecommerce") class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-categories">Categories</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a data-bs-toggle="collapse" href="#sidebarOrders" aria-expanded="false" aria-controls="sidebarOrders" class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-orders">Orders</span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <div class="collapse" id="sidebarOrders">
-                                <ul class="sub-menu">
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("Orders", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-orders-list">Orders</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("OrderDetails", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-order-details">Order Details</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Customers", "Ecommerce") class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-customers">Customers</span>
-                            </a>
-                        </li>
-
-                        <li class="side-nav-item">
-                            <a data-bs-toggle="collapse" href="#sidebarSellers" aria-expanded="false" aria-controls="sidebarSellers" class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-sellers"> Sellers </span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <div class="collapse" id="sidebarSellers">
-                                <ul class="sub-menu">
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("Sellers", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-sellers-list">Sellers</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("SellerDetails", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-sellers-details">Sellers Details</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Reviews", "Ecommerce") class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-reviews">Reviews</span>
-                            </a>
-                        </li>
-
-                        <li class="side-nav-item">
-                            <a data-bs-toggle="collapse" href="#sidebarReports" aria-expanded="false" aria-controls="sidebarReports" class="side-nav-link">
-                                <span class="menu-text" data-lang="eco-reports"> Reports </span>
-                                <span class="menu-arrow"></span>
-                            </a>
-                            <div class="collapse" id="sidebarReports">
-                                <ul class="sub-menu">
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("ProductViews", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-views">Product Views</span>
-                                        </a>
-                                    </li>
-                                    <li class="side-nav-item">
-                                        <a href=@Url.Action("Sales", "Ecommerce") class="side-nav-link">
-                                            <span class="menu-text" data-lang="eco-pro-sales">Sales</span>
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarEmail" aria-expanded="false" aria-controls="sidebarEmail" class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-mail"></i></span>
-                    <span class="menu-text" data-lang="email">Email</span>
-                    <span class="badge text-bg-danger">New</span>
-                </a>
-                <div class="collapse" id="sidebarEmail">
-                    <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Email", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="email-inbox">Inbox</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("EmailDetails", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="email-details">Details</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("EmailCompose", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="email-compose">Compose</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarUsers" aria-expanded="false" aria-controls="sidebarUsers" class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-users"></i></span>
-                    <span class="menu-text" data-lang="users"> Users </span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse" id="sidebarUsers">
-                    <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Contacts", "Users") class="side-nav-link">
-                                <span class="menu-text" data-lang="contacts">Contacts</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Roles", "Users") class="side-nav-link">
-                                <span class="menu-text" data-lang="roles">Roles</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Permissions", "Users") class="side-nav-link">
-                                <span class="menu-text" data-lang="permissions">Permissions</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <li class="side-nav-item">
-                <a data-bs-toggle="collapse" href="#sidebarProjects" aria-expanded="false" aria-controls="sidebarProjects" class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-briefcase"></i></span>
-                    <span class="menu-text" data-lang="projects">My Projects </span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse" id="sidebarProjects">
-                    <ul class="sub-menu">
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Index", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="projects">My Projects</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("List", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="projects-list">Projects List</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Details", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="project-details">View Project</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Kanban", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="project-kanban">Kanban Board</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("TeamBoard", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="project-team-board">Team Board</span>
-                            </a>
-                        </li>
-                        <li class="side-nav-item">
-                            <a href=@Url.Action("Activity", "Project") class="side-nav-link">
-                                <span class="menu-text" data-lang="project-activity">Activity Steam</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("FileManager", "Apps") class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-folder"></i></span>
-                    <span class="menu-text" data-lang="file-manager"> File Manager </span>
-                </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Chat", "Apps") class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-message-dots"></i></span>
-                    <span class="menu-text" data-lang="chat"> Chat </span>
-                </a>
-            </li>
-
-            <li class="side-nav-item">
-                <a href=@Url.Action("Calendar", "Apps") class="side-nav-link">
-                    <span class="menu-icon"><i class="ti ti-calendar"></i></span>
-                    <span class="menu-text" data-lang="calendar"> Calendar </span>
-                </a>
-            </li>
+           
+           
 
             <li class="side-nav-item">
                 <a data-bs-toggle="collapse" href="#sidebarInvoice" aria-expanded="false" aria-controls="sidebarInvoice" class="side-nav-link">
                     <span class="menu-icon"><i class="ti ti-invoice"></i></span>
-                    <span class="menu-text" data-lang="invoice"> Invoice</span>
+                    <span class="menu-text" > Tabelas </span>
                     <span class="menu-arrow"></span>
                 </a>
                 <div class="collapse" id="sidebarInvoice">
                     <ul class="sub-menu">
                         <li class="side-nav-item">
-                            <a href=@Url.Action("Invoice", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="invoices">Invoices</span>
+                            <a href=@Url.Action("Index", "Taux1", new { area = "SYS" }) class="side-nav-link">
+                                <span class="menu-text">Taux1</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href=@Url.Action("InvoiceDetails", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="invoice-details">Single Invoice</span>
+                            <a href=@Url.Action("Index", "Taux2", new { area = "SYS" }) class="side-nav-link">
+                                <span class="menu-text">Taux1</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href=@Url.Action("InvoiceCreate", "Apps") class="side-nav-link">
-                                <span class="menu-text" data-lang="invoice-create">New Invoice</span>
+                            <a href=@Url.Action("Index", "Constantes", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">Constantes</span>
                             </a>
                         </li>
                     </ul>
                 </div>
             </li>
+
+<!---->
+
+<li class="side-nav-title" data-lang="apps-title">Modulo Segurança </li>
+
+
+            <li class="side-nav-item">
+                <a data-bs-toggle="collapse" href="#sidebarInvoice" aria-expanded="false" aria-controls="sidebarInvoice" class="side-nav-link">
+                    <span class="menu-icon"><i class="ti ti-invoice"></i></span>
+                    <span class="menu-text" > Segurança </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="sidebarInvoice">
+                    <ul class="sub-menu">
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "Usuario", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">Usuarios</span>
+                            </a>
+                        </li>
+
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "UsuarioGrupo", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">UsuarioGrupo</span>
+                            </a>
+                        </li>
+
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "GrupoFuncao", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">GrupoFuncao</span>
+                            </a>
+                        </li>
+
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "Tsistema", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">Tsistema</span>
+                            </a>
+                        </li>
+
+
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "FuncoesSistema", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text"> data-lang=""FuncoesSistema</span>
+                            </a>
+                        </li>
+
+                        <li class="side-nav-item">
+                            <a href=@Url.Action("Index", "Btfuncao", new { area = "SEG" }) class="side-nav-link">
+                                <span class="menu-icon"><i class="ti ti-stack-front"></i></span>
+                                <span class="menu-text" data-lang="">Btfuncao</span>
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+
+
+
+
+
 
             <li class="side-nav-item">
                 <a data-bs-toggle="collapse" href="#sidebarOtherApps" aria-expanded="false" aria-controls="sidebarOtherApps" class="side-nav-link">

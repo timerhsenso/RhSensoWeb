@@ -1,0 +1,36 @@
+@model RhSensoWeb.Models.Taux2
+@{
+    ViewBag.Title = "Editar Situação Auxiliar";
+    Layout = null; // quando aberto em modal via AJAX
+    // RowId (Cdtptabela|Cdsituacao) — usado pelo POST /Edit/{id}
+    var rowId = (Model?.Cdtptabela ?? string.Empty).Trim() + "|" + (Model?.Cdsituacao ?? string.Empty).Trim();
+}
+<form asp-action="Edit" asp-controller="Taux2" asp-area="SYS" method="post" id="formTaux2Edit" asp-route-id="@rowId">
+    @Html.AntiForgeryToken()
+    <div class="alert alert-warning small">Chaves não podem ser alteradas.</div>
+    <fieldset disabled>
+        @await Html.PartialAsync("~/Areas/SYS/Views/Taux2/_FormFields.cshtml", Model)
+    </fieldset>
+    <div class="mt-2"></div>
+    <div class="row g-3">
+        <div class="col-md-12">
+            <label asp-for="Dcsituacao" class="form-label"></label>
+            <input asp-for="Dcsituacao" class="form-control" />
+            <span asp-validation-for="Dcsituacao" class="text-danger"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Noordem" class="form-label"></label>
+            <input asp-for="Noordem" class="form-control" />
+            <span asp-validation-for="Noordem" class="text-danger"></span>
+        </div>
+        <div class="col-md-3 form-check mt-4">
+            <input asp-for="Ativo" class="form-check-input" />
+            <label asp-for="Ativo" class="form-check-label"></label>
+            <span asp-validation-for="Ativo" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="mt-3 d-flex justify-content-end gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    </div>
+</form>

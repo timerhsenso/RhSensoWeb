@@ -41,7 +41,7 @@ namespace RhSensoWeb.Common
             => new()
             {
                 Success = false,
-                Message = message ?? "Ocorreu um erro interno no servidor.",
+                Message = message ?? "Ocorreu um erro interno no servidor01.",
                 Errors = new Dictionary<string, string[]> { ["_error"] = new[] { ex.Message } }
             };
     }

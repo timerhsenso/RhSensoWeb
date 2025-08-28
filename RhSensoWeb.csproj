@@ -31,6 +31,7 @@
     <Folder Include="Areas\RHU\Log\" />
     <Folder Include="Areas\SEG\Models\" />
     <Folder Include="Areas\SEG\Log\" />
+    <Folder Include="Areas\SYS\Views\Taux2\" />
   </ItemGroup>
 
 </Project>

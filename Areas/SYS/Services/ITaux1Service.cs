@@ -1,4 +1,3 @@
-// Areas/SYS/Services/ITaux1Service.cs
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using RhSensoWeb.Common;
 using RhSensoWeb.Models;

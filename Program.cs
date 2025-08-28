@@ -117,21 +117,25 @@ namespace RhSensoWeb
                 builder.Services.AddMemoryCache();
 
                 // =======================
-                // SEG – Services da área
+                // SEG – 
                 // =======================
                 builder.Services.AddScoped<ITsistemaService, TsistemaService>();
                 builder.Services.AddScoped<IUsuarioService, UsuarioService>();     // Usa UpdateAtivoPolicy no controller de usuário. :contentReference[oaicite:2]{index=2}
                 builder.Services.AddScoped<IBtfuncaoService, BtfuncaoService>();
 
                 // =======================
-                // SYS – Services da área (Taux1)  << NEW
+                // SYS – 
                 // =======================
                 builder.Services.AddScoped<ITaux1Service, Taux1Service>();         // Controller revisado usa RequirePermission/tokens como Usuário.
+                builder.Services.AddScoped<ITaux2Service, Taux2Service>();
+
+                // (se o Taux2 usa token por linha, igual Taux1)
+                //  builder.Services.AddScoped<IRowTokenService, RowTokenService>();
 
                 // =======================
                 // MIDDLEWARES (DI)
                 // =======================
-                builder.Services.AddScoped<ExceptionHandlingMiddleware>();         // registra IMiddleware
+                builder.Services.AddScoped<_ExceptionHandlingMiddleware>();         // registra IMiddleware
 
                 // =======================
                 // RATE LIMITER
@@ -165,7 +169,7 @@ namespace RhSensoWeb
                 // =======================
                 // EXCEÇÕES (GLOBAL) — deve vir PRIMEIRO no pipeline
                 // =======================
-                app.UseMiddleware<ExceptionHandlingMiddleware>();                  // JSON 500 padronizado
+                app.UseMiddleware<_ExceptionHandlingMiddleware>();                  // JSON 500 padronizado
                 app.UseSerilogRequestLogging();                                    // log de cada request
 
                 // Header de ambiente em todas as respostas

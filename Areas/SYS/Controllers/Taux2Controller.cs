@@ -5,26 +5,26 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 
 using RhSensoWeb.Common;
-using RhSensoWeb.Models;                   // Taux1
+using RhSensoWeb.Models;                   // Taux2
 using RhSensoWeb.Filters;                  // RequirePermission
 using RhSensoWeb.Services.Security;        // IRowTokenService
-using RhSensoWeb.Areas.SYS.Services;       // ITaux1Service
+using RhSensoWeb.Areas.SYS.Services;       // ITaux2Service
 using RhSensoWeb.Data;                     // ApplicationDbContext
 
 namespace RhSensoWeb.Areas.SYS.Controllers
 {
     [Area("SYS")]
     [Authorize]
-    public class Taux1Controller : Controller
+    public class Taux2Controller : Controller
     {
-        private readonly ITaux1Service _service;
-        private readonly ILogger<Taux1Controller> _logger;
+        private readonly ITaux2Service _service;
+        private readonly ILogger<Taux2Controller> _logger;
         private readonly IRowTokenService _rowToken;
         private readonly IMemoryCache _cache;
 
-        public Taux1Controller(
-            ITaux1Service service,
-            ILogger<Taux1Controller> logger,
+        public Taux2Controller(
+            ITaux2Service service,
+            ILogger<Taux2Controller> logger,
             IRowTokenService rowToken,
             IMemoryCache cache)
         {
@@ -34,8 +34,8 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             _cache = cache;
         }
 
-        // Payload do token (apenas ID da linha)
-        private sealed record RowKeys(string Cdtptabela);
+        // Payload do token (PK composta)
+        private sealed record RowKeys(string Cdtptabela, string Cdsituacao);
 
         // ====== VIEW PRINCIPAL ======
         [HttpGet]
@@ -54,17 +54,21 @@ namespace RhSensoWeb.Areas.SYS.Controllers
 
             try
             {
-                if (result.Data is IEnumerable<Taux1> list)
+                if (result.Data is IEnumerable<Taux2> list)
                 {
                     var dataTyped = list.Select(r =>
                     {
-                        var id = (r.Cdtptabela ?? string.Empty).Trim();
+                        var k1 = (r.Cdtptabela ?? string.Empty).Trim();
+                        var k2 = (r.Cdsituacao ?? string.Empty).Trim();
                         return new
                         {
                             r.Cdtptabela,
-                            r.Dctabela,
-                            deleteToken = _rowToken.Protect(new RowKeys(id), "Delete", userId, TimeSpan.FromMinutes(10)),
-                            editToken = _rowToken.Protect(new RowKeys(id), "Edit", userId, TimeSpan.FromMinutes(10))
+                            r.Cdsituacao,
+                            r.Dcsituacao,
+                            r.Noordem,
+                            r.Ativo,
+                            deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
+                            editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
                         };
                     });
                     return Json(new { data = dataTyped });
@@ -74,20 +78,24 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 var raw = (result.Data as IEnumerable<object>) ?? Enumerable.Empty<object>();
                 var data = raw.Select(o =>
                 {
-                    string id = GetString(o, "Cdtptabela")?.Trim() ?? string.Empty;
+                    string k1 = GetString(o, "Cdtptabela")?.Trim() ?? string.Empty;
+                    string k2 = GetString(o, "Cdsituacao")?.Trim() ?? string.Empty;
                     return new
                     {
-                        Cdtptabela = id,
-                        Dctabela = GetString(o, "Dctabela"),
-                        deleteToken = _rowToken.Protect(new RowKeys(id), "Delete", userId, TimeSpan.FromMinutes(10)),
-                        editToken = _rowToken.Protect(new RowKeys(id), "Edit", userId, TimeSpan.FromMinutes(10))
+                        Cdtptabela = k1,
+                        Cdsituacao = k2,
+                        Dcsituacao = GetString(o, "Dcsituacao"),
+                        Noordem = GetString(o, "Noordem"),
+                        Ativo = GetString(o, "Ativo"),
+                        deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
+                        editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
                     };
                 });
                 return Json(new { data });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao montar retorno do GetData de Taux1.");
+                _logger.LogError(ex, "Erro ao montar retorno do GetData de Taux2.");
                 return Json(new { data = result.Data });
             }
         }
@@ -128,7 +136,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro em DeleteByToken (Taux1). token={Token} user={User}", dto.Token, userId);
+                _logger.LogError(ex, "Erro em DeleteByToken (Taux2). token={Token} user={User}", dto.Token, userId);
                 return StatusCode(500, ApiResponse.Fail("Erro interno ao excluir."));
             }
         }
@@ -174,20 +182,20 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "I")]
-        public async Task<IActionResult> Create([Bind("Cdtptabela,Dctabela")] Taux1 entity)
+        public async Task<IActionResult> Create([Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Flativoaux,Ativo")] Taux2 entity)
             => Json(await _service.CreateAsync(entity, ModelState));
 
         // ====== EDIT (GET/POST) ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
-        public async Task<IActionResult> Edit(string id)
+        public async Task<IActionResult> Edit(string cdtptabela, string cdsituacao)
         {
-            if (string.IsNullOrWhiteSpace(id))
+            if (string.IsNullOrWhiteSpace(cdtptabela) || string.IsNullOrWhiteSpace(cdsituacao))
                 return BadRequest("Id inválido.");
 
             var db = HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-            var entity = await db.Taux1.AsNoTracking()
-                                       .FirstOrDefaultAsync(x => x.Cdtptabela == id);
+            var entity = await db.Taux2.AsNoTracking()
+                                       .FirstOrDefaultAsync(x => x.Cdtptabela == cdtptabela && x.Cdsituacao == cdsituacao);
 
             if (entity is null)
                 return NotFound();
@@ -198,16 +206,16 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
-        public async Task<IActionResult> Edit(string id, [Bind("Cdtptabela,Dctabela")] Taux1 entity)
-            => Json(await _service.EditAsync(id, entity, ModelState));
+        public async Task<IActionResult> Edit(string cdtptabela, string cdsituacao, [Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Flativoaux,Ativo")] Taux2 entity)
+            => Json(await _service.EditAsync((cdtptabela, cdsituacao), entity, ModelState));
 
         // ====== DELETE tradicional (confirmação) ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "E")]
-        public async Task<IActionResult> Delete(string id)
+        public async Task<IActionResult> Delete(string cdtptabela, string cdsituacao)
         {
-            if (string.IsNullOrWhiteSpace(id)) return NotFound();
-            var entity = await _service.GetByIdAsync(id);
+            if (string.IsNullOrWhiteSpace(cdtptabela) || string.IsNullOrWhiteSpace(cdsituacao)) return NotFound();
+            var entity = await _service.GetByIdAsync((cdtptabela, cdsituacao));
             if (entity is null) return NotFound();
             return View(entity);
         }
@@ -215,9 +223,9 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "E")]
-        public async Task<IActionResult> DeleteConfirmed(string id)
+        public async Task<IActionResult> DeleteConfirmed(string cdtptabela, string cdsituacao)
         {
-            var resp = await _service.DeleteByIdAsync(id);
+            var resp = await _service.DeleteByIdAsync((cdtptabela, cdsituacao));
             if (resp.Success) TempData["SuccessMessage"] = "Registro excluído com sucesso!";
             else TempData["ErrorMessage"] = resp.Message;
             return RedirectToAction(nameof(Index));

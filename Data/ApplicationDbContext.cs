@@ -20,9 +20,9 @@ namespace RhSensoWeb.Data
         /* SEG */
         public DbSet<Btfuncao> Btfuncao { get; set; }
 
-        /**/
-
-        public DbSet<RhSensoWeb.Models.Taux1> Taux1 { get; set; }
+        /* SYS */
+        public DbSet<Taux1> Taux1 { get; set; }
+        public DbSet<Taux2> Taux2 { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -180,6 +180,47 @@ namespace RhSensoWeb.Data
                       .HasConstraintName("FK_btfuncao_fucn1_cdsistema_cdfuncao")
                       .OnDelete(DeleteBehavior.Restrict);
             });
+
+            // Taux2
+            modelBuilder.Entity<Taux2>(entity =>
+            {
+                entity.ToTable("taux2");
+
+                // PK composta (Cdtptabela, Cdsituacao)
+                entity.HasKey(e => new { e.Cdtptabela, e.Cdsituacao });
+
+                // Colunas e constraints (alinhado ao StringLength do model)
+                entity.Property(e => e.Cdtptabela)
+                      .HasColumnName("cdtptabela")
+                      .HasMaxLength(2)
+                      .IsUnicode(false);
+
+                entity.Property(e => e.Cdsituacao)
+                      .HasColumnName("cdsituacao")
+                      .HasMaxLength(2)
+                      .IsUnicode(false);
+
+                entity.Property(e => e.Dcsituacao)
+                      .HasColumnName("dcsituacao")
+                      .HasMaxLength(60)
+                      .IsUnicode(false);
+
+                entity.Property(e => e.Noordem)
+                      .HasColumnName("noordem");
+
+                entity.Property(e => e.Flativoaux)
+                      .HasColumnName("flativoaux")
+                      .HasMaxLength(1)
+                      .IsUnicode(false)
+                      .HasDefaultValue("S");
+
+                // FK para Taux1 pela Cdtptabela (sem cascade)
+                entity.HasOne(e => e.Taux1)
+                      .WithMany() // ou .WithMany(x => x.Taux2s) se existir coleção em Taux1
+                      .HasForeignKey(e => e.Cdtptabela)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }
