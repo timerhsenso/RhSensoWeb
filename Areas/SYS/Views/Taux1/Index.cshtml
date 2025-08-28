@@ -1,0 +1,155 @@
+@{
+    ViewBag.Areas = ViewBag.Areas ?? "SYS";
+    ViewBag.Views = ViewBag.Views ?? "Taux1";
+    ViewBag.Controller = ViewBag.Controller ?? "Taux1";
+    ViewBag.HabilitaBtnNovo = ViewBag.HabilitaBtnNovo ?? true;
+    ViewBag.HabilitaBtnExportar = ViewBag.HabilitaBtnExportar ?? true;
+    ViewBag.gridName = ViewBag.gridName ?? "#gridTaux1";
+    ViewBag.Title = ViewBag.Title ?? "Tabelas Auxiliares";
+    ViewBag.SubTitle = ViewBag.SubTitle ?? "Comum";
+
+    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
+}
+
+@await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+@await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <table id="gridTaux1" class="table table-striped table-bordered w-100">
+      <thead>
+        <tr>
+          <th data-data="cdtptabela">Código</th>
+          <th data-data="dctabela">Descrição</th>
+          <th data-data="__actions" class="text-center">Ações</th>
+        </tr>
+      </thead>
+    </table>
+  </div>
+</div>
+
+<!-- Modal padrão -->
+<div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 id="formModalTitle" class="modal-title">Cadastro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="formModalBody">
+        <!-- Conteúdo carregado via AJAX -->
+      </div>
+    </div>
+  </div>
+</div>
+
+@section styles{
+  <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.2.0/r-3.0.3/datatables.min.css" />
+}
+
+@section scripts{
+  <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/b-html5-3.2.0/b-print-3.0.1/r-3.0.3/datatables.min.js"></script>
+
+  <script type="module">
+    import { ensureAjaxSetup } from "/js/core/http.js";
+    ensureAjaxSetup();
+
+    const perms = window.Perms || { canEdit: true, canDelete: true }; // ajuste conforme seu helper
+    const gridSel = "#gridTaux1";
+
+    function actionButtons(row){
+      const editBtn = `<button class="btn btn-sm btn-outline-primary me-1 btn-edit" data-id="${row.cdtptabela}" title="Editar"><i class="fa fa-pen"></i></button>`;
+      const delBtn  = `<button class="btn btn-sm btn-outline-danger btn-del" data-id="${row.cdtptabela}" title="Excluir"><i class="fa fa-trash"></i></button>`;
+      return `
+        <div class="btn-group" role="group">
+          ${perms.canEdit ? editBtn : ""}
+          ${perms.canDelete ? delBtn : ""}
+        </div>`;
+    }
+
+    const table = $(gridSel).DataTable({
+      processing: true,
+      serverSide: true,
+      responsive: true,
+      ajax: {
+        url: '@Url.Action("GetData", "Taux1", new { area = "SYS" })',
+        type: 'GET',
+        data: function(d) {
+          // DataTables envia estrutura padrão; já tratamos no Controller
+          // Mapear nome de coluna para order se preciso:
+          const idx = d.order?.[0]?.column ?? 0;
+          d['order[0][column]'] = idx;
+          d['columns[0][data]'] = 'cdtptabela';
+          d['columns[1][data]'] = 'dctabela';
+          d['columns[2][data]'] = '__actions';
+        }
+      },
+      columns: [
+        { data: 'cdtptabela', title: 'Código' },
+        { data: 'dctabela',   title: 'Descrição' },
+        { data: null, title: 'Ações', orderable: false, className: 'text-center',
+          render: (_, __, row) => actionButtons(row) }
+      ],
+      dom: 'Bfrtip',
+      buttons: [
+        @(((bool)ViewBag.HabilitaBtnExportar) ? Html.Raw("'copy','excel','pdf','print',") : Html.Raw(""))
+        { text: 'Colunas', action: ()=> window.ColVis?.open(gridSel) }
+      ],
+      order: [[0,'asc']]
+    });
+
+    // Novo
+    document.addEventListener('click', (e)=>{
+      const el = e.target.closest('[data-action="new-record"]');
+      if(!el) return;
+      loadModal('@Url.Action("Create","Taux1", new {area="SYS"})', 'Novo Registro');
+    });
+
+    // Edit
+    $(gridSel).on('click', '.btn-edit', function(){
+      const id = this.dataset.id;
+      loadModal('@Url.Action("Edit","Taux1", new {area="SYS"})' + '?id=' + encodeURIComponent(id), 'Editar Registro');
+    });
+
+    // Delete
+    $(gridSel).on('click', '.btn-del', async function(){
+      const id = this.dataset.id;
+      if(!confirm('Confirma excluir?')) return;
+      const token = document.querySelector('meta[name="request-verification-token"]')?.content;
+      const resp = await fetch('@Url.Action("Delete","Taux1", new {area="SYS"})', {
+        method: 'POST',
+        headers: { 'RequestVerificationToken': token, 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ id })
+      });
+      const json = await resp.json();
+      if(json?.success){ table.ajax.reload(null, false); } else { alert(json?.message || 'Falha ao excluir.'); }
+    });
+
+    // Helpers de modal
+    async function loadModal(url, title){
+      const $modal = $('#formModal');
+      $('#formModalTitle').text(title);
+      $('#formModalBody').html('<div class="text-center p-5">Carregando...</div>');
+      $modal.modal('show');
+
+      const html = await (await fetch(url)).text();
+      $('#formModalBody').html(html);
+
+      // reativa unobtrusive se você usa
+      if ($.validator && $.validator.unobtrusive) {
+        $.validator.unobtrusive.parse($('#formModalBody').find('form'));
+      }
+    }
+
+    // Hook ColVis em modal (se tiver seu colvis.js)
+    window.ColVis = window.ColVis || {
+      open: (selector)=>{
+        if(typeof window.openColVisModal === 'function'){
+          window.openColVisModal(selector, table); // sua função no colvis.js
+        }else{
+          alert('ColVis não encontrado.');
+        }
+      }
+    };
+  </script>
+}

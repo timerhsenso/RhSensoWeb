@@ -75,56 +75,74 @@
 
 
     <script type="module">
-        import { initColVis } from '@Url.Content("~/js/colvis.js")';
+        import { initColVis } from '/js/colvis.js';
 
         const modal  = document.getElementById('colVisModal');
         const holder = modal.querySelector('#colvis-holder');
 
+        // Abre o modal e monta o seletor
         modal.addEventListener('shown.bs.modal', (ev) => {
-          // 1) tenta pegar do botão que abriu
-          let tableSel = ev.relatedTarget?.getAttribute('data-table');
-
-          // 2) se não veio, usa o que ficou salvo na última abertura
-          if (!tableSel) tableSel = modal.dataset.table || null;
-
-          // 3) fallback: detecta a primeira DataTable visível na página
+          let tableSel = ev.relatedTarget?.getAttribute('data-table') || modal.dataset.table || null;
           if (!tableSel) {
             const t = document.querySelector('table.dataTable, table[id^="grid"], table[id^="tbl"]');
             if (t?.id) tableSel = `#${t.id}`;
           }
+          if (!tableSel) return;
 
-          if (!tableSel) {
-            console.warn('ColVis: nenhuma tabela encontrada para o modal.');
-            return;
-          }
-
-          modal.dataset.table = tableSel;         // persiste p/ reabrir
+          modal.dataset.table = tableSel;
           holder.innerHTML = '';
           delete holder.dataset.colvisInitialized;
 
           initColVis({ table: tableSel, holder, placeholder: 'Colunas visíveis' });
         });
 
+        // helper para gerar a mesma "key" do colvis.js
+        function slug(s){
+          return String(s||'').trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+            .replace(/[^\w]+/g,'-').replace(/(^-|-$)/g,'');
+        }
+
+        // ✅ Botão PADRÃO: aplica o conjunto salvo como padrão
         document.getElementById('colvis-reset')?.addEventListener('click', () => {
           const sel = modal.dataset.table;
           if (!(window.jQuery && sel && jQuery.fn.dataTable.isDataTable(sel))) return;
+
           const dt = jQuery(sel).DataTable();
-          dt.columns().visible(true, false);
+          const id = dt.settings()[0].sTableId || sel.replace('#','');
+          const DEFAULT_KEY = 'colvis:default:' + id;
+
+          let defaultKeys = [];
+          try { defaultKeys = JSON.parse(localStorage.getItem(DEFAULT_KEY) || '[]'); } catch {}
+
+          const defSet = new Set(defaultKeys);
+
+          dt.columns().every(function (idx) {
+            const th = this.header();
+            const title = (th && th.textContent) ? th.textContent.trim() : '';
+            const key = th?.dataset?.colKey || slug(title) || ('col-' + idx);
+            // se nunca salvou padrão, cai no fallback "tudo visível"
+            this.visible(defSet.size ? defSet.has(key) : true, false);
+          });
           dt.columns.adjust().draw(false);
 
-          const id = dt.settings()[0].sTableId || sel.replace('#','');
-          try { localStorage.removeItem('colvis:' + id); } catch {}
+          // Atualiza a seleção do usuário com o padrão
+          try { localStorage.setItem('colvis:' + id, JSON.stringify(defaultKeys)); } catch {}
 
+          // Reconstrói o select para refletir o reset
           holder.innerHTML = '';
           delete holder.dataset.colvisInitialized;
           initColVis({ table: sel, holder });
         });
 
+        // Limpa o holder ao fechar
         modal.addEventListener('hidden.bs.modal', () => {
           holder.innerHTML = '';
           delete holder.dataset.colvisInitialized;
         });
     </script>
+
+
 
 
 

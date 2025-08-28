@@ -20,6 +20,11 @@ namespace RhSensoWeb.Data
         /* SEG */
         public DbSet<Btfuncao> Btfuncao { get; set; }
 
+        /**/
+
+        public DbSet<RhSensoWeb.Models.Taux1> Taux1 { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

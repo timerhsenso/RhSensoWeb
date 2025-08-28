@@ -32,33 +32,26 @@
         }
 
 
-    /* Deixe o dropdown do Choices visível sobre a modal, sem puxar scroll */
-    #colVisModal .modal-content,
-    #colVisModal .modal-body {
-        overflow: visible !important;
+    /* Scroll horizontal dentro do grid */
+    .dataTables_wrapper .dataTables_scroll {
+        overflow-x: auto;
     }
 
-    #colVisModal .choices {
-        width: 100%;
+    .dataTables_wrapper .dataTables_scrollHead,
+    .dataTables_wrapper .dataTables_scrollBody {
+        width: 100% !important;
     }
 
-    #colVisModal .choices__inner {
-        min-height: 44px;
+    /* Quebra/não quebra de texto por coluna */
+    .dt-wrap {
+        white-space: normal !important;
+        word-break: break-word;
     }
 
-    /* Dropdown do Choices sobre a modal (z-index alto e largura 100%) */
-    #colVisModal .choices__list--dropdown,
-    #colVisModal .choices__list[aria-expanded] {
-        position: absolute;
-        z-index: 1085; /* acima de conteúdo da modal */
-        width: 100%;
-        max-height: 280px; /* altura máxima do menu */
-        overflow-y: auto; /* scroll no dropdown, não na modal */
-        background: var(--bs-body-bg);
-        color: var(--bs-body-color);
-        border: 1px solid rgba(0,0,0,.1);
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+    .dt-nowrap {
+        white-space: nowrap !important;
     }
+
 
 
 </style>

@@ -70,6 +70,23 @@ export function initColVis({
         const tableId = settings.sTableId || slug(table) || 'datatable';
         const STORAGE_KEY = storageKeyPrefix + tableId;
 
+        // 🔹 chave para o “padrão” desta tabela
+        const DEFAULT_KEY = storageKeyPrefix + 'default:' + tableId;
+
+        // helpers -------------------------------------------------
+
+        function getVisibleKeys() {
+            const keys = [];
+            dt.columns().every(function (idx) {
+                const th = this.header();
+                const title = (th && th.textContent) ? th.textContent.trim() : '';
+                if (skip(idx, title, th)) return;
+                const key = th?.dataset?.colKey || slug(title) || ('col-' + idx);
+                if (this.visible()) keys.push(key);
+            });
+            return keys;
+        }
+
         // Mapeia colunas da tabela
         function collectColumns() {
             const cols = [];
@@ -135,6 +152,16 @@ export function initColVis({
             }
         }
 
+        function syncSelectToKeys(keys) {
+            const set = new Set(keys);
+            [...selectEl.options].forEach(o => { o.selected = set.has(o.dataset.key); });
+            if (selectEl._choices) {
+                const valuesToSelect = [...selectEl.options].filter(o => o.selected).map(o => o.value);
+                selectEl._choices.removeActiveItems();
+                selectEl._choices.setChoiceByValue(valuesToSelect);
+            }
+        }
+
         // Aplica visibilidade conforme seleção atual do select
         function applyVisibility(fromStorage = false) {
             const selectedKeys = new Set([...selectEl.selectedOptions].map(o => o.dataset.key));
@@ -153,6 +180,16 @@ export function initColVis({
         }
 
         // ===== Inicialização =====
+
+        // 🔹 Carrega/gera padrão 1x (estado visível ao abrir pela primeira vez)
+        let defaultKeys = [];
+        try { defaultKeys = JSON.parse(localStorage.getItem(DEFAULT_KEY) || '[]'); } catch { }
+        if (!defaultKeys.length) {
+            defaultKeys = getVisibleKeys();
+            try { localStorage.setItem(DEFAULT_KEY, JSON.stringify(defaultKeys)); } catch { }
+        }
+
+        // Aplica seleção salva do usuário (ou as visíveis atuais) e sincroniza DT
         let savedKeys = [];
         try { savedKeys = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { }
         buildUI(savedKeys);   // <- já preenche o select com as colunas visíveis se não houver saved
@@ -186,11 +223,36 @@ export function initColVis({
             // se Choices, sincroniza chips
             if (selectEl._choices) {
                 const valuesToSelect = [...selectEl.options].filter(o => o.selected).map(o => o.value);
-                // limpa seleção atual e aplica novamente
                 selectEl._choices.removeActiveItems();
                 selectEl._choices.setChoiceByValue(valuesToSelect);
             }
         });
+
+        // 🔹 Mini-API no holder (opcional para quem quiser chamar de fora)
+        holderEl._colvis = {
+            getDefaultKeys: () => [...defaultKeys],
+            setDefaultKeys: (keys = []) => {
+                defaultKeys = Array.isArray(keys) ? [...keys] : [];
+                try { localStorage.setItem(DEFAULT_KEY, JSON.stringify(defaultKeys)); } catch { }
+            },
+            getSelectedKeys: () => [...selectEl.selectedOptions].map(o => o.dataset.key),
+            setSelectedKeys: (keys = [], { apply = true, save = true } = {}) => {
+                syncSelectToKeys(keys);
+                if (apply) applyVisibility(!save);
+                if (save) try { localStorage.setItem(STORAGE_KEY, JSON.stringify(keys)); } catch { }
+            },
+            resetToDefault: () => {
+                syncSelectToKeys(defaultKeys);
+                // aplica e salva como seleção atual do usuário
+                applyVisibility(false);
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultKeys)); } catch { }
+            }
+        };
+
+        // 🔹 Eventos opcionais
+        holderEl.addEventListener('colvis:reset', () => holderEl._colvis.resetToDefault());
+        holderEl.addEventListener('colvis:set', (e) => holderEl._colvis.setSelectedKeys(e?.detail?.keys || [], { apply: true, save: true }));
+        holderEl.addEventListener('colvis:set-default', (e) => holderEl._colvis.setDefaultKeys(e?.detail?.keys || getVisibleKeys()));
     });
 }
 
