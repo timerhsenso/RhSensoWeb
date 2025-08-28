@@ -39,14 +39,14 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1
         // Abrir tela => Consultar (C)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "C")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "C")]
         public IActionResult Index() => View();
 
         // GET: /SYS/Taux1/GetData
         // Retorno para DataTables: { data: [...] }
         // Listar => Consultar (C)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "C")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "C")]
         public async Task<IActionResult> GetData()
         {
             var userId = User?.Identity?.Name ?? "anon";
@@ -117,7 +117,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1/SafeEdit?token=...
         // Editar => (A)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "A")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "A")]
         public async Task<IActionResult> SafeEdit([FromQuery] string token)
         {
             var userId = User?.Identity?.Name ?? "anon";
@@ -134,7 +134,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // Excluir => (E)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SYS", "SYS_TAUX1", "E")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "E")]
         public async Task<IActionResult> DeleteByToken([FromBody] DeleteByTokenDto dto)
         {
             var userId = User?.Identity?.Name ?? "anon";
@@ -161,7 +161,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // Excluir em lote => (E)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SYS", "SYS_TAUX1", "E")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "E")]
         public async Task<IActionResult> DeleteBatch([FromBody] DeleteBatchDto dto)
         {
             if (dto?.Tokens == null || dto.Tokens.Count == 0)
@@ -202,14 +202,14 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1/Create
         // Incluir => (I)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "I")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "I")]
         public IActionResult Create() => View();
 
         // POST: /SYS/Taux1/Create
         // Incluir => (I)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SYS", "SYS_TAUX1", "I")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "I")]
         public async Task<IActionResult> Create([Bind("Cdtptabela,Dctabela")] Taux1 entidade)
         {
             var resp = await _service.CreateAsync(entidade, ModelState);
@@ -219,7 +219,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1/Edit/{id}
         // Carrega o formulário de edição no modal (DataTables → AppModal.form)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "A")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "A")]
         public async Task<IActionResult> Edit(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -239,7 +239,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // Alterar => (A)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SYS", "SYS_TAUX1", "A")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "A")]
         public async Task<IActionResult> Edit(string id, [Bind("Cdtptabela,Dctabela")] Taux1 entidade)
         {
             var resp = await _service.EditAsync(id, entidade, ModelState);
@@ -249,7 +249,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1/Delete/{id} (confirmação)
         // Excluir => (E)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "E")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "E")]
         public async Task<IActionResult> Delete(string id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
@@ -263,7 +263,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // Excluir => (E)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [RequirePermission("SYS", "SYS_TAUX1", "E")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "E")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             try
@@ -286,7 +286,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // GET: /SYS/Taux1/HealthCheck
         // Consultar => (C)
         [HttpGet]
-        [RequirePermission("SYS", "SYS_TAUX1", "C")]
+        [RequirePermission("SYS", "RHU_FM_TAUX1", "C")]
         public async Task<IActionResult> HealthCheck()
         {
             var resp = await _service.HealthCheckAsync();

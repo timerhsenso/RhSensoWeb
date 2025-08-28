@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using RhSensoWeb.Common;
+using RhSensoWeb.Common;              // ApiResponse
 using RhSensoWeb.Data;
-using RhSensoWeb.Models;                 // Taux1
-using RhSensoWeb.Services.Security;      // IRowTokenService
+using RhSensoWeb.Models;              // Taux1
+using RhSensoWeb.Services.Security;   // IRowTokenService
 
 namespace RhSensoWeb.Areas.SYS.Services
 {
@@ -32,10 +32,26 @@ namespace RhSensoWeb.Areas.SYS.Services
             _cache = cache;
         }
 
-        // payload para os tokens opacos
+        // payload para tokens opacos
         public sealed record RowKeys(string Cdtptabela);
 
-        // ===== LISTAGEM (DataTables) =====
+        // --- helper local: converte ModelState → Dictionary<string,string[]> (sem extensão) ---
+        private static Dictionary<string, string[]> BuildErrorDict(ModelStateDictionary modelState)
+        {
+            var dict = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in modelState)
+            {
+                var errs = kv.Value?.Errors;
+                if (errs == null || errs.Count == 0) continue;
+
+                dict[kv.Key] = errs
+                    .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Valor inválido." : e.ErrorMessage)
+                    .ToArray();
+            }
+            return dict;
+        }
+
+        // ===== LISTAGEM =====
         public async Task<ApiResponse<IEnumerable<Taux1>>> GetDataAsync(string userId)
         {
             try
@@ -58,7 +74,7 @@ namespace RhSensoWeb.Areas.SYS.Services
         public async Task<ApiResponse> CreateAsync(Taux1 entity, ModelStateDictionary modelState)
         {
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", BuildErrorDict(modelState));
 
             try
             {
@@ -68,7 +84,7 @@ namespace RhSensoWeb.Areas.SYS.Services
                 if (exists)
                 {
                     modelState.AddModelError(nameof(Taux1.Cdtptabela), "Já existe um registro com este código.");
-                    return ApiResponse.Fail("Já existe um registro com este código.", modelState.ToErrorDictionary());
+                    return ApiResponse.Fail("Já existe um registro com este código.", BuildErrorDict(modelState));
                 }
 
                 entity.Cdtptabela = id; // normaliza PK
@@ -94,7 +110,7 @@ namespace RhSensoWeb.Areas.SYS.Services
                 return ApiResponse.Fail("Registro inválido (ID divergente).");
 
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", BuildErrorDict(modelState));
 
             try
             {
@@ -120,7 +136,7 @@ namespace RhSensoWeb.Areas.SYS.Services
             }
         }
 
-        // ===== SAFE EDIT (token opaco) =====
+        // ===== SAFE EDIT (token) =====
         public async Task<(ApiResponse resp, Taux1? entidade)> GetForSafeEditAsync(string token, string userId)
         {
             try
