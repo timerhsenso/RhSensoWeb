@@ -62,6 +62,7 @@
 
             // Monte o array de ações de acordo com as permissões
             const actions = [
+                { name:'gotoTaux2', icon:'fa-list', class:'btn-outline-secondary', title:'Visualizar Itens' },
                 ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
                 ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
             ];
@@ -176,8 +177,10 @@
                 .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
             });
 
-            DTUtil.actions.on('Taux1', 'detail', async ({ id/*, meta, dt, button */ }) => {
-                alert('detail ' + id);
+            DTUtil.actions.on('Taux1', 'gotoTaux2', async ({ id/*, meta, dt, button */ }) => {
+                document.getElementById('gotoTaux2_cdtptabela').value = id;
+                document.getElementById('frmGotoTaux2').submit();
+
             });
 
             // ==========================================
@@ -188,3 +191,16 @@
         });
     </script>
 }
+
+
+<form id="frmGotoTaux2" method="post"
+      asp-area="SYS"
+      asp-controller="Taux2"
+      asp-action="OpenFromParent"
+      class="d-inline">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="cdtptabela" id="gotoTaux2_cdtptabela">
+</form>
+
+
+

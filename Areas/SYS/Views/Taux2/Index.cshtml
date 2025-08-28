@@ -128,4 +128,31 @@
             DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridTaux2', { reload: true, resetPaging: true });
         });
     </script>
+    
+
+
 }
+
+<!--//-->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const gridName = '#gridTaux2';
+
+      // Garante que SEMPRE mandaremos o filtro na chamada do DataTables
+      $(gridName).on('preXhr.dt', function (_e, _settings, data) {
+        data.cdtptabela = document.getElementById('cdtptabelaFiltro')?.value || '';
+      });
+
+      // Se o grid já foi criado pelo seu DTUtil, apenas recarrega pra aplicar o filtro;
+      // caso você crie o grid aqui, mantenha este reload após o create.
+      //const dt = $(gridName).DataTable();
+      //dt.ajax.reload(null, true); // força nova chamada já com o cdtptabela
+    });
+</script>
+
+@{
+    var filtro = (string)(ViewBag.CdtptabelaFiltro ?? "");
+}
+<input type="hidden" id="cdtptabelaFiltro" value="@filtro" />
+
+

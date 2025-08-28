@@ -40,26 +40,51 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         // ====== VIEW PRINCIPAL ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "C")]
-        public IActionResult Index() => View();
+        public IActionResult Index(string? cdtptabela = null)
+        {
+            // prioriza querystring; se vier vazio, tenta TempData (POST do pai)
+            cdtptabela ??= TempData["Taux2.Filter.Cdtptabela"] as string;
+            ViewBag.CdtptabelaFiltro = cdtptabela?.Trim();
+            return View();
+        }
+
+        // Recebe POST do Taux1 e salva filtro para o próximo request
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult OpenFromParent(string cdtptabela)
+        {
+            if (!string.IsNullOrWhiteSpace(cdtptabela))
+                TempData["Taux2.Filter.Cdtptabela"] = cdtptabela.Trim();
+
+            return RedirectToAction(nameof(Index));
+        }
 
         // ====== LISTAGEM PARA GRID ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "C")]
-        public async Task<IActionResult> GetData()
+        public async Task<IActionResult> GetData(string? cdtptabela = null)
         {
             var userId = User?.Identity?.Name ?? "anon";
+
+            // pega tudo do service (sem quebrar o padrão/assinatura)
             var result = await _service.GetDataAsync(userId);
             if (!result.Success)
                 return Json(new { data = new List<object>(), error = result.Message });
+
+            var filtro = cdtptabela?.Trim();
 
             try
             {
                 if (result.Data is IEnumerable<Taux2> list)
                 {
+                    // aplica o filtro se veio
+                    if (!string.IsNullOrEmpty(filtro))
+                        list = list.Where(x => (x.Cdtptabela ?? "").Trim() == filtro);
+
                     var dataTyped = list.Select(r =>
                     {
-                        var k1 = (r.Cdtptabela ?? string.Empty).Trim();
-                        var k2 = (r.Cdsituacao ?? string.Empty).Trim();
+                        var k1 = (r.Cdtptabela ?? "").Trim();
+                        var k2 = (r.Cdsituacao ?? "").Trim();
                         return new
                         {
                             r.Cdtptabela,
@@ -71,26 +96,31 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                             editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
                         };
                     });
+
                     return Json(new { data = dataTyped });
                 }
 
-                // Fallback genérico (projeção anônima)
+                // fallback genérico caso o service retorne shape anônimo
                 var raw = (result.Data as IEnumerable<object>) ?? Enumerable.Empty<object>();
-                var data = raw.Select(o =>
-                {
-                    string k1 = GetString(o, "Cdtptabela")?.Trim() ?? string.Empty;
-                    string k2 = GetString(o, "Cdsituacao")?.Trim() ?? string.Empty;
-                    return new
+                var data = raw.Where(o =>
+                       string.IsNullOrEmpty(filtro)
+                    || (GetString(o, "Cdtptabela") ?? "").Trim() == filtro)
+                    .Select(o =>
                     {
-                        Cdtptabela = k1,
-                        Cdsituacao = k2,
-                        Dcsituacao = GetString(o, "Dcsituacao"),
-                        Noordem = GetString(o, "Noordem"),
-                        Ativo = GetString(o, "Ativo"),
-                        deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
-                        editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
-                    };
-                });
+                        var k1 = (GetString(o, "Cdtptabela") ?? "").Trim();
+                        var k2 = (GetString(o, "Cdsituacao") ?? "").Trim();
+                        return new
+                        {
+                            Cdtptabela = k1,
+                            Cdsituacao = k2,
+                            Dcsituacao = GetString(o, "Dcsituacao"),
+                            Noordem = GetString(o, "Noordem"),
+                            Ativo = GetString(o, "Ativo"),
+                            deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
+                            editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
+                        };
+                    });
+
                 return Json(new { data });
             }
             catch (Exception ex)
@@ -99,6 +129,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 return Json(new { data = result.Data });
             }
         }
+
 
         // ====== SAFE EDIT via token ======
         [HttpGet]
@@ -127,11 +158,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 var resp = await _service.DeleteByTokenAsync(dto.Token, userId);
                 if (resp.Success)
                     return Ok(ApiResponse.Ok("Excluído com sucesso."));
-
-                var msg = string.IsNullOrWhiteSpace(resp.Message)
-                    ? "Não foi possível excluir o registro."
-                    : resp.Message;
-
+                var msg = string.IsNullOrWhiteSpace(resp.Message) ? "Não foi possível excluir o registro." : resp.Message;
                 return BadRequest(ApiResponse.Fail(msg));
             }
             catch (Exception ex)
@@ -149,86 +176,121 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         {
             if (dto?.Tokens == null || dto.Tokens.Count == 0)
                 return BadRequest(ApiResponse.Fail("Nenhum token informado."));
-
             var userId = User?.Identity?.Name ?? "anon";
             int ok = 0, fail = 0;
-
             foreach (var token in dto.Tokens)
             {
                 try
                 {
                     var resp = await _service.DeleteByTokenAsync(token, userId);
-                    if (resp.Success) ok++; else fail++;
+                    if (resp.Success) ok++;
+                    else fail++;
                 }
                 catch
                 {
                     fail++;
                 }
             }
-
             var allOk = fail == 0;
-            var message = allOk
-                ? $"Exclusão concluída. OK {ok}."
-                : $"Exclusão concluída com falhas. OK {ok} | Falhas {fail}.";
-
+            var message = allOk ? $"Exclusão concluída. OK {ok}." : $"Exclusão concluída com falhas. OK {ok} | Falhas {fail}.";
             return Ok(new { success = allOk, ok, fail, message });
         }
 
-        // ====== CREATE (GET/POST) ======
+        // ====== CADASTRO (CRIAR NOVO) ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "I")]
-        public IActionResult Create() => View();
+        public async Task<IActionResult> Create()
+        {
+            ViewBag.TiposTabela = await _service.GetTiposTabelaAsync();
+            return View();
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "I")]
-        public async Task<IActionResult> Create([Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Flativoaux,Ativo")] Taux2 entity)
-            => Json(await _service.CreateAsync(entity, ModelState));
+        public async Task<IActionResult> Create([Bind("Cdtptabela,Cdsituacao,Dcsituacao")] Taux2 entity)
+        {
+            var resp = await _service.CreateAsync(entity, ModelState);
+            if (resp.Success)
+            {
+                TempData["SuccessMessage"] = resp.Message;
+                return RedirectToAction(nameof(Index));
+            }
 
-        // ====== EDIT (GET/POST) ======
+            ViewBag.TiposTabela = await _service.GetTiposTabelaAsync();
+            TempData["ErrorMessage"] = resp.Message;
+            return View(entity);
+        }
+
+        // ====== EDICAO ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
-        public async Task<IActionResult> Edit(string cdtptabela, string cdsituacao)
+        public async Task<IActionResult> Edit(string token)
         {
-            if (string.IsNullOrWhiteSpace(cdtptabela) || string.IsNullOrWhiteSpace(cdsituacao))
-                return BadRequest("Id inválido.");
-
-            var db = HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-            var entity = await db.Taux2.AsNoTracking()
-                                       .FirstOrDefaultAsync(x => x.Cdtptabela == cdtptabela && x.Cdsituacao == cdsituacao);
-
-            if (entity is null)
-                return NotFound();
-
-            return View(entity);
+            var (resp, entidade) = await _service.GetForSafeEditAsync(token, User.Identity?.Name!);
+            if (!resp.Success || entidade is null)
+            {
+                TempData["ErrorMessage"] = resp.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            return View(entidade);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
-        public async Task<IActionResult> Edit(string cdtptabela, string cdsituacao, [Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Flativoaux,Ativo")] Taux2 entity)
-            => Json(await _service.EditAsync((cdtptabela, cdsituacao), entity, ModelState));
+        public async Task<IActionResult> Edit(string token, [Bind("Cdtptabela,Cdsituacao,Dcsituacao")] Taux2 entity)
+        {
+            var (resp, entidade) = await _service.GetForSafeEditAsync(token, User.Identity?.Name!);
+            if (!resp.Success || entidade is null)
+            {
+                TempData["ErrorMessage"] = resp.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            var respUpdate = await _service.EditAsync((entidade.Cdtptabela!, entidade.Cdsituacao!), entity, ModelState);
+            if (respUpdate.Success)
+            {
+                TempData["SuccessMessage"] = respUpdate.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            TempData["ErrorMessage"] = respUpdate.Message;
+            return View(entity);
+        }
 
-        // ====== DELETE tradicional (confirmação) ======
+        // ====== EXCLUSAO ======
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "E")]
-        public async Task<IActionResult> Delete(string cdtptabela, string cdsituacao)
+        public async Task<IActionResult> Delete(string token)
         {
-            if (string.IsNullOrWhiteSpace(cdtptabela) || string.IsNullOrWhiteSpace(cdsituacao)) return NotFound();
-            var entity = await _service.GetByIdAsync((cdtptabela, cdsituacao));
-            if (entity is null) return NotFound();
-            return View(entity);
+            var (resp, entidade) = await _service.GetForSafeEditAsync(token, User.Identity?.Name!);
+            if (!resp.Success || entidade is null)
+            {
+                TempData["ErrorMessage"] = resp.Message;
+                return RedirectToAction(nameof(Index));
+            }
+            return View(entidade);
         }
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "E")]
-        public async Task<IActionResult> DeleteConfirmed(string cdtptabela, string cdsituacao)
+        public async Task<IActionResult> DeleteConfirmed(string token)
         {
-            var resp = await _service.DeleteByIdAsync((cdtptabela, cdsituacao));
-            if (resp.Success) TempData["SuccessMessage"] = "Registro excluído com sucesso!";
+            var resp = await _service.DeleteByTokenAsync(token, User.Identity?.Name!);
+            if (resp.Success) TempData["SuccessMessage"] = resp.Message;
             else TempData["ErrorMessage"] = resp.Message;
             return RedirectToAction(nameof(Index));
+        }
+
+        // ====== VIEW DETALHES ======
+        [HttpGet]
+        [RequirePermission("RHU", "RHU_FM_TAUX1", "C")]
+        public async Task<IActionResult> Details(string cdtptabela, string cdsituacao)
+        {
+            if (string.IsNullOrEmpty(cdtptabela) || string.IsNullOrEmpty(cdsituacao)) return NotFound();
+            var entity = await _service.GetByIdAsync((cdtptabela, cdsituacao));
+            if (entity is null) return NotFound();
+            return View(entity);
         }
 
         // ====== HEALTH CHECK ======

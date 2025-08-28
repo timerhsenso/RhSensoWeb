@@ -48,6 +48,12 @@
     ViewBag.dataCreatePost = icreatePost;           // POST que grava
 }
 
+@{
+    ViewBag.DropdownExtraHtml =
+        $"<li><a class=\"dropdown-item\" href=\"{Url.Action("Grupos", "Usuario", new { area = "SEG" })}\">" +
+        "<i class=\"fa fa-users\"></i> Opção D</a></li>";
+}
+
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
@@ -69,6 +75,7 @@
 
            // Monte o array de ações de acordo com as permissões (sem "Detalhes")
         const actions = [
+            { name:'gotoUserGr', icon:'fa-list', class:'fa-solid fa-people-group', title:'Visualizar Grupos' },
           ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
           ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
         ];
@@ -189,7 +196,7 @@
             .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
 
-          DTUtil.actions.on('Usuario', 'detail', async ({ id/*, meta, dt, button */ }) => {
+          DTUtil.actions.on('Usuario', 'gotoUserGr', async ({ id/*, meta, dt, button */ }) => {
             alert('detail ' + id);
           });
 
@@ -203,3 +210,4 @@
 
 
 }
+

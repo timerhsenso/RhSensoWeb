@@ -7,6 +7,7 @@ using RhSensoWeb.Common;              // ApiResponse
 using RhSensoWeb.Data;
 using RhSensoWeb.Models;              // Taux2
 using RhSensoWeb.Services.Security;   // IRowTokenService
+using System.Collections.Generic;
 
 namespace RhSensoWeb.Areas.SYS.Services
 {
@@ -15,202 +16,224 @@ namespace RhSensoWeb.Areas.SYS.Services
         private readonly ApplicationDbContext _db;
         private readonly ILogger<Taux2Service> _logger;
         private readonly IRowTokenService _rowToken;
-        private readonly IMemoryCache _cache;
-
-        private const string PurposeEdit = "Edit";
-        private const string PurposeDelete = "Delete";
 
         public Taux2Service(
             ApplicationDbContext db,
             ILogger<Taux2Service> logger,
-            IRowTokenService rowToken,
-            IMemoryCache cache)
+            IRowTokenService rowToken)
         {
             _db = db;
             _logger = logger;
             _rowToken = rowToken;
-            _cache = cache;
         }
 
-        // Payload do token opaco
         private sealed record RowKeys(string Cdtptabela, string Cdsituacao);
 
-        // Helper local: ModelState -> Dictionary<string, string[]>
-        private static Dictionary<string, string[]> BuildErrorDict(ModelStateDictionary modelState)
-        {
-            var dict = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
-            foreach (var kv in modelState)
-            {
-                var errs = kv.Value?.Errors;
-                if (errs is null || errs.Count == 0) continue;
-                dict[kv.Key] = errs
-                    .Select(e => string.IsNullOrWhiteSpace(e.ErrorMessage) ? "Valor inválido." : e.ErrorMessage)
-                    .ToArray();
-            }
-            return dict;
-        }
+        private const string PurposeEdit = "Edit";
+        private const string PurposeDelete = "Delete";
 
-        // ===== LISTAGEM =====
-        public async Task<ApiResponse<IEnumerable<Taux2>>> GetDataAsync(string userId)
+        // =======================
+        // LISTAGEM
+        // =======================
+        public async Task<ApiResponse<IEnumerable<Taux2>>> GetDataAsync(string userId, string? cdtptabela = null)
         {
             try
             {
-                var rows = await _db.Taux2
-                    .AsNoTracking()
-                    .OrderBy(x => x.Cdtptabela).ThenBy(x => x.Noordem).ThenBy(x => x.Cdsituacao)
+                IQueryable<Taux2> q = _db.Taux2.AsNoTracking();
+
+                if (!string.IsNullOrWhiteSpace(cdtptabela))
+                {
+                    var key = cdtptabela.Trim();
+                    q = q.Where(x => x.Cdtptabela == key);
+                }
+
+                var rows = await q
+                    .OrderBy(x => x.Cdtptabela)
+                    .ThenBy(x => x.Noordem)
+                    .ThenBy(x => x.Cdsituacao)
                     .ToListAsync();
 
+                // Retorno no padrão ApiResponse genérico
                 return ApiResponse<IEnumerable<Taux2>>.Ok(rows);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao obter dados de Taux2");
-                return ApiResponse<IEnumerable<Taux2>>.Fail("Erro ao carregar dados do servidor.");
+                _logger.LogError(ex, "Erro ao listar Taux2 (user={UserId}, filtro={Filtro})", userId, cdtptabela);
+                return ApiResponse<IEnumerable<Taux2>>.Fail("Erro ao consultar a lista de situações.");
             }
         }
 
-        // ===== CREATE =====
+        // =======================
+        // CREATE
+        // =======================
         public async Task<ApiResponse> CreateAsync(Taux2 entity, ModelStateDictionary modelState)
         {
             if (!modelState.IsValid)
                 return ApiResponse.Fail("Verifique os campos destacados.", BuildErrorDict(modelState));
 
+            entity.Cdtptabela = (entity.Cdtptabela ?? string.Empty).Trim();
+            entity.Cdsituacao = (entity.Cdsituacao ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(entity.Cdtptabela))
+                return ApiResponse.Fail("Código Tipo Tabela é obrigatório.");
+
+            if (string.IsNullOrWhiteSpace(entity.Cdsituacao))
+                return ApiResponse.Fail("Código Situação é obrigatório.");
+
+            var exists = await _db.Taux2.AsNoTracking()
+                .AnyAsync(x => x.Cdtptabela == entity.Cdtptabela && x.Cdsituacao == entity.Cdsituacao);
+
+            if (exists)
+                return ApiResponse.Fail("Já existe uma situação com este Código para o Tipo de Tabela informado.");
+
             try
             {
-                var k1 = (entity.Cdtptabela ?? string.Empty).Trim();
-                var k2 = (entity.Cdsituacao ?? string.Empty).Trim();
-
-                var exists = await _db.Taux2.AsNoTracking().AnyAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
-                if (exists)
-                {
-                    modelState.AddModelError(nameof(Taux2.Cdtptabela), "Já existe um registro com este código.");
-                    return ApiResponse.Fail("Já existe um registro com este código.", BuildErrorDict(modelState));
-                }
-
-                entity.Cdtptabela = k1; // normaliza PK
-                entity.Cdsituacao = k2;
-                entity.Dcsituacao = (entity.Dcsituacao ?? string.Empty).Trim();
-                entity.Flativoaux = entity.Ativo ? "S" : "N";
-
                 _db.Taux2.Add(entity);
                 await _db.SaveChangesAsync();
 
-                return ApiResponse.Ok("Registro criado com sucesso!");
+                _logger.LogInformation("Taux2 criado: {K1}-{K2}", entity.Cdtptabela, entity.Cdsituacao);
+                return ApiResponse.Ok("Registro criado com sucesso.");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Erro de banco ao criar Taux2 {K1}-{K2}", entity.Cdtptabela, entity.Cdsituacao);
+                return ApiResponse.Fail("Erro ao salvar o registro. Verifique dados e tente novamente.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao criar Taux2 {K1}-{K2}", entity.Cdtptabela, entity.Cdsituacao);
+                _logger.LogError(ex, "Erro inesperado ao criar Taux2 {K1}-{K2}", entity.Cdtptabela, entity.Cdsituacao);
                 return ApiResponse.Fail("Erro ao salvar o registro. Tente novamente.");
             }
         }
 
-        // ===== EDIT =====
+        // =======================
+        // EDIT
+        // =======================
         public async Task<ApiResponse> EditAsync((string cdtptabela, string cdsituacao) id, Taux2 entity, ModelStateDictionary modelState)
         {
             var k1 = (id.cdtptabela ?? string.Empty).Trim();
             var k2 = (id.cdsituacao ?? string.Empty).Trim();
-            if (k1 != (entity.Cdtptabela ?? string.Empty).Trim() || k2 != (entity.Cdsituacao ?? string.Empty).Trim())
+
+            if (k1 != (entity.Cdtptabela ?? string.Empty).Trim() ||
+                k2 != (entity.Cdsituacao ?? string.Empty).Trim())
+            {
                 return ApiResponse.Fail("Registro inválido (ID divergente).");
+            }
 
             if (!modelState.IsValid)
                 return ApiResponse.Fail("Verifique os campos destacados.", BuildErrorDict(modelState));
 
+            var dbEntity = await _db.Taux2
+                .FirstOrDefaultAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
+
+            if (dbEntity is null)
+                return ApiResponse.Fail("Registro não encontrado para alteração.");
+
+            dbEntity.Dcsituacao = entity.Dcsituacao?.Trim() ?? "";
+            dbEntity.Noordem = entity.Noordem;
+            dbEntity.Flativoaux = (entity.Flativoaux ?? (entity.Ativo ? "S" : "N"))?.Trim();
+
             try
             {
-                entity.Dcsituacao = (entity.Dcsituacao ?? string.Empty).Trim();
-                entity.Flativoaux = entity.Ativo ? "S" : "N";
-                _db.Taux2.Update(entity);
                 await _db.SaveChangesAsync();
-
-                return ApiResponse.Ok("Registro atualizado com sucesso!");
+                _logger.LogInformation("Taux2 editado: {K1}-{K2}", k1, k2);
+                return ApiResponse.Ok("Registro alterado com sucesso.");
             }
-            catch (DbUpdateConcurrencyException ex)
+            catch (DbUpdateException ex)
             {
-                var exists = await _db.Taux2.AnyAsync(e => e.Cdtptabela == entity.Cdtptabela && e.Cdsituacao == entity.Cdsituacao);
-                if (!exists)
-                    return ApiResponse.Fail("Registro não encontrado.");
-
-                _logger.LogError(ex, "Concorrência ao editar Taux2 {K1}-{K2}", k1, k2);
-                return ApiResponse.Fail("O registro foi modificado por outro usuário. Recarregue a página.");
+                _logger.LogError(ex, "Erro de banco ao editar Taux2 {K1}-{K2}", k1, k2);
+                return ApiResponse.Fail("Erro ao salvar o registro. Verifique os dados e tente novamente.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao editar Taux2 {K1}-{K2}", k1, k2);
-                return ApiResponse.Fail("Erro ao salvar as alterações. Tente novamente.");
+                _logger.LogError(ex, "Erro inesperado ao editar Taux2 {K1}-{K2}", k1, k2);
+                return ApiResponse.Fail("Erro ao salvar o registro. Tente novamente.");
             }
         }
 
-        // ===== SAFE EDIT (token) =====
+        // =======================
+        // SAFE EDIT por token
+        // =======================
         public async Task<(ApiResponse resp, Taux2? entidade)> GetForSafeEditAsync(string token, string userId)
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
-                if (purpose != PurposeEdit || tokenUser != userId)
-                    return (ApiResponse.Fail("Token inválido."), null);
+                var unp = _rowToken.Unprotect<RowKeys>(token);
+                if (!string.Equals(unp.Purpose, PurposeEdit, StringComparison.OrdinalIgnoreCase) || !string.Equals(unp.UserId, userId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (ApiResponse.Fail("Token inválido ou não pertence a este usuário."), null);
+                }
+                var k = unp.Payload;
+                var entidade = await _db.Taux2.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Cdtptabela == k.Cdtptabela && x.Cdsituacao == k.Cdsituacao);
 
-                var e = await _db.Taux2.FindAsync(keys.Cdtptabela, keys.Cdsituacao);
-                if (e is null)
+                if (entidade is null)
                     return (ApiResponse.Fail("Registro não encontrado."), null);
 
-                return (ApiResponse.Ok(), e);
+                return (ApiResponse.Ok(), entidade);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro ao validar token de edição em Taux2");
-                return (ApiResponse.Fail("Falha ao validar token de edição."), null);
+                _logger.LogError(ex, "Falha ao validar token de edição (Taux2). user={User}", userId);
+                return (ApiResponse.Fail("Não foi possível validar o registro."), null);
             }
         }
 
-        // ===== DELETE BY TOKEN =====
+        // =======================
+        // DELETE por token
+        // =======================
         public async Task<ApiResponse> DeleteByTokenAsync(string token, string userId)
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
-                if (purpose != PurposeDelete || tokenUser != userId)
-                    return ApiResponse.Fail("Token inválido.");
+                var unp = _rowToken.Unprotect<RowKeys>(token);
+                if (!string.Equals(unp.Purpose, PurposeDelete, StringComparison.OrdinalIgnoreCase) || !string.Equals(unp.UserId, userId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ApiResponse.Fail("Token inválido ou não pertence a este usuário.");
+                }
+                var k = unp.Payload;
+                var entidade = await _db.Taux2
+                    .FirstOrDefaultAsync(x => x.Cdtptabela == k.Cdtptabela && x.Cdsituacao == k.Cdsituacao);
 
-                var entidade = await _db.Taux2.FindAsync(keys.Cdtptabela, keys.Cdsituacao);
                 if (entidade is null)
                     return ApiResponse.Fail("Registro não encontrado.");
 
                 _db.Taux2.Remove(entidade);
                 await _db.SaveChangesAsync();
 
-                _logger.LogInformation("Taux2 excluído com sucesso: {K1}-{K2}", keys.Cdtptabela, keys.Cdsituacao);
-                return ApiResponse.Ok("Excluído com sucesso.");
-            }
-            catch (DbUpdateException ex)
-            {
-                _logger.LogError(ex, "Erro de banco ao excluir Taux2 via token");
-                return ApiResponse.Fail("Erro ao excluir. Verifique dependências.");
+                return ApiResponse.Ok("Registro excluído com sucesso.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao excluir Taux2 via token");
-                return ApiResponse.Fail("Erro interno do servidor.");
+                _logger.LogError(ex, "Falha ao excluir registro por token (Taux2).", ex);
+                return ApiResponse.Fail("Erro ao excluir. Tente novamente.");
             }
         }
 
-        // ===== SUPORTE A DELETE/DETAILS tradicional =====
+        // =======================
+        // GET BY ID
+        // =======================
         public async Task<Taux2?> GetByIdAsync((string cdtptabela, string cdsituacao) id)
         {
             var k1 = (id.cdtptabela ?? string.Empty).Trim();
             var k2 = (id.cdsituacao ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(k1) || string.IsNullOrWhiteSpace(k2)) return null;
-
-            return await _db.Taux2.AsNoTracking()
-                                  .FirstOrDefaultAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
+            return await _db.Taux2.AsNoTracking().FirstOrDefaultAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
         }
 
+        // =======================
+        // DELETE BY ID (via form)
+        // =======================
         public async Task<ApiResponse> DeleteByIdAsync((string cdtptabela, string cdsituacao) id)
         {
+            var k1 = (id.cdtptabela ?? string.Empty).Trim();
+            var k2 = (id.cdsituacao ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(k1) || string.IsNullOrWhiteSpace(k2))
+                return ApiResponse.Fail("ID inválido.");
+
             try
             {
-                var k1 = (id.cdtptabela ?? string.Empty).Trim();
-                var k2 = (id.cdsituacao ?? string.Empty).Trim();
-                var entidade = await _db.Taux2.FindAsync(k1, k2);
+                var entidade = await _db.Taux2.FirstOrDefaultAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
                 if (entidade is null)
                     return ApiResponse.Fail("Registro não encontrado.");
 
@@ -221,22 +244,24 @@ namespace RhSensoWeb.Areas.SYS.Services
             }
             catch (DbUpdateException ex)
             {
-                _logger.LogError(ex, "Erro de banco ao excluir Taux2 {K1}-{K2}", id.cdtptabela, id.cdsituacao);
+                _logger.LogError(ex, "Erro de banco ao excluir Taux2 {K1}-{K2}", k1, k2);
                 return ApiResponse.Fail("Erro ao excluir. Verifique dependências.");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Erro inesperado ao excluir Taux2 {K1}-{K2}", id.cdtptabela, id.cdsituacao);
+                _logger.LogError(ex, "Erro inesperado ao excluir Taux2 {K1}-{K2}", k1, k2);
                 return ApiResponse.Fail("Erro interno do servidor.");
             }
         }
 
-        // ===== HEALTH CHECK =====
+        // =======================
+        // HEALTH CHECK
+        // =======================
         public async Task<ApiResponse<int>> HealthCheckAsync()
         {
             try
             {
-                var count = await _db.Taux2.CountAsync();
+                var count = await _db.Taux2.AsNoTracking().CountAsync();
                 return ApiResponse<int>.Ok(count, "Conexão com banco OK");
             }
             catch (Exception ex)
@@ -246,13 +271,28 @@ namespace RhSensoWeb.Areas.SYS.Services
             }
         }
 
-        // ===== COMBOS =====
+        // =======================
+        // COMBOS
+        // =======================
         public async Task<IEnumerable<SelectListItem>> GetTiposTabelaAsync()
         {
             return await _db.Taux1.AsNoTracking()
                 .OrderBy(x => x.Cdtptabela)
-                .Select(x => new SelectListItem { Value = x.Cdtptabela, Text = x.Cdtptabela + " - " + x.Dctabela })
+                .Select(x => new SelectListItem
+                {
+                    Value = x.Cdtptabela,
+                    Text = x.Cdtptabela + " - " + x.Dctabela
+                })
                 .ToListAsync();
         }
+
+        // =======================
+        // Helpers
+        // =======================
+        private static IDictionary<string, string[]> BuildErrorDict(ModelStateDictionary modelState)
+            => modelState.Where(kv => kv.Value?.Errors.Count > 0)
+                         .ToDictionary(
+                             kv => kv.Key,
+                             kv => kv.Value!.Errors.Select(e => e.ErrorMessage).ToArray());
     }
 }

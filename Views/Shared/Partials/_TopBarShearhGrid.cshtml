@@ -185,6 +185,10 @@
                             }
                             <hr />
 
+                            @if (!string.IsNullOrEmpty(ViewBag.DropdownExtraHtml as string))
+                            {
+                                @Html.Raw(ViewBag.DropdownExtraHtml)
+                            }
                     
                             <li><a class="dropdown-item" href="#" id="exportPrint"><i data-lucide="star" class="fs-lg"></i> Adicionar aos Favoritos</a></li>
                             
