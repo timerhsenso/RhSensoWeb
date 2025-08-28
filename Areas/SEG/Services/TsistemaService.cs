@@ -3,11 +3,13 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using RhSensoWeb.Areas.SEG.DTOs;
 using RhSensoWeb.Common;
+using RhSensoWeb.Common.Tokens;          // << NEW: RowKey genérico
 using RhSensoWeb.Data;
 using RhSensoWeb.Models;
 using RhSensoWeb.Services.Security;
-using RhSensoWeb.Areas.SEG.DTOs;
+using RhSensoWeb.Support;
 
 namespace RhSensoWeb.Areas.SEG.Services
 {
@@ -51,8 +53,8 @@ namespace RhSensoWeb.Areas.SEG.Services
                         cdsistema: id,
                         dcsistema: r.Dcsistema ?? "",
                         ativo: r.Ativo,
-                        editToken: _rowToken.Protect(new RowKeys(id), PurposeEdit, userId, TimeSpan.FromMinutes(10)),
-                        deleteToken: _rowToken.Protect(new RowKeys(id), PurposeDelete, userId, TimeSpan.FromMinutes(10))
+                        editToken: _rowToken.Protect(new RowKey(id), PurposeEdit, userId, TimeSpan.FromMinutes(10)),
+                        deleteToken: _rowToken.Protect(new RowKey(id), PurposeDelete, userId, TimeSpan.FromMinutes(10))
                     );
                 });
 
@@ -117,7 +119,7 @@ namespace RhSensoWeb.Areas.SEG.Services
         public async Task<ApiResponse> CreateAsync(Tsistema sistema, ModelStateDictionary modelState)
         {
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorsDictionary()); // << FIX
 
             try
             {
@@ -126,7 +128,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 if (existe)
                 {
                     modelState.AddModelError(nameof(Tsistema.Cdsistema), "Já existe um sistema com este código.");
-                    return ApiResponse.Fail("Já existe um sistema com este código.", modelState.ToErrorDictionary());
+                    return ApiResponse.Fail("Já existe um sistema com este código.", modelState.ToErrorsDictionary()); // << FIX
                 }
 
                 sistema.Cdsistema = id; // normaliza
@@ -150,7 +152,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 return ApiResponse.Fail("Registro inválido (ID divergente).");
 
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorsDictionary()); // << FIX
 
             try
             {
@@ -179,11 +181,11 @@ namespace RhSensoWeb.Areas.SEG.Services
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
+                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKey>(token); // << RowKey genérico
                 if (purpose != PurposeEdit || tokenUser != userId)
                     return (ApiResponse.Fail("Token inválido."), null);
 
-                var sistema = await _db.Tsistema.FindAsync(keys.Cdsistema);
+                var sistema = await _db.Tsistema.FindAsync(keys.Id); // << usa Id
                 if (sistema is null)
                     return (ApiResponse.Fail("Sistema não encontrado."), null);
 
@@ -201,18 +203,18 @@ namespace RhSensoWeb.Areas.SEG.Services
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
+                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKey>(token); // << RowKey genérico
                 if (purpose != PurposeDelete || tokenUser != userId)
                     return ApiResponse.Fail("Token inválido.");
 
-                var sistema = await _db.Tsistema.FindAsync(keys.Cdsistema);
+                var sistema = await _db.Tsistema.FindAsync(keys.Id); // << usa Id
                 if (sistema is null)
                     return ApiResponse.Fail("Sistema não encontrado.");
 
                 _db.Tsistema.Remove(sistema);
                 await _db.SaveChangesAsync();
 
-                _logger.LogInformation("Sistema excluído com sucesso: {Id}", keys.Cdsistema);
+                _logger.LogInformation("Sistema excluído com sucesso: {Id}", keys.Id);
                 return ApiResponse.Ok("Excluído com sucesso.");
             }
             catch (DbUpdateException ex)
@@ -241,8 +243,5 @@ namespace RhSensoWeb.Areas.SEG.Services
                 return ApiResponse<int>.Fail("Erro na conexão com o banco de dados");
             }
         }
-
-        // payload para os tokens opacos
-        public sealed record RowKeys(string Cdsistema);
     }
 }

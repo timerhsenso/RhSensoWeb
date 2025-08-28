@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 
 using RhSensoWeb.Common;
+using RhSensoWeb.Common.Tokens;          // << usa RowKey genérico
 using RhSensoWeb.Models;                 // Tuse1 (modelo de usuário)
 using RhSensoWeb.Filters;                // RequirePermission
 using RhSensoWeb.Services.Security;      // IRowTokenService
@@ -34,9 +35,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             _cache = memoryCache;
         }
 
-        // ===== Payload do token por linha =====
-        public sealed record RowKeys(string Cdusuario);
-
         // GET: /SEG/Usuario
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "C")]
@@ -55,7 +53,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
 
             try
             {
-                // Tentativa tipada (IEnumerable<Tuse1> ou projeção equivalente)
+                // Tentativa tipada
                 if (result.Data is IEnumerable<Tuse1> typed)
                 {
                     var dataTyped = typed.Select(x => new
@@ -67,7 +65,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                         tipo_desc = (x.Tpusuario?.ToString() == "1") ? "Empregado" : "Terceiro",
                         ativo = x.Ativo,
                         token = _rowToken.Protect(
-                            payload: new RowKeys((x.Cdusuario ?? string.Empty).Trim()),
+                            payload: new RowKey((x.Cdusuario ?? string.Empty).Trim()),
                             purpose: "Delete",
                             userId: userId,
                             ttl: TimeSpan.FromMinutes(10))
@@ -75,7 +73,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     return Json(new { data = dataTyped });
                 }
 
-                // Fallback usando reflexão (caso venha projeção anônima do service)
+                // Fallback usando reflexão (caso venha projeção anônima)
                 var raw = (result.Data as IEnumerable<object>) ?? Enumerable.Empty<object>();
                 var data = raw.Select(r =>
                 {
@@ -89,7 +87,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                         tipo_desc = ((GetString(r, "tpusuario") ?? GetString(r, "Tpusuario")) == "1") ? "Empregado" : "Terceiro",
                         ativo = GetBool(r, "ativo") || GetBool(r, "Ativo"),
                         token = _rowToken.Protect(
-                            payload: new RowKeys((id ?? string.Empty).Trim()),
+                            payload: new RowKey((id ?? string.Empty).Trim()),
                             purpose: "Delete",
                             userId: userId,
                             ttl: TimeSpan.FromMinutes(10))
@@ -105,7 +103,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         }
 
         // POST: /SEG/Usuario/UpdateAtivo
-        // Recebe: x-www-form-urlencoded (id=...&ativo=true|false) ou JSON.
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("UpdateAtivoPolicy")]
@@ -116,7 +113,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             if (string.IsNullOrWhiteSpace(id))
                 return Json(new { success = false, message = "ID do usuário é obrigatório." });
 
-            // Anti-double click / cooldown curto
+            // Anti-double click
             var userId = User?.Identity?.Name ?? "anon";
             var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
             if (_cache.TryGetValue(cooldownKey, out _))
@@ -159,7 +156,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 if (resp.Success)
                     return Ok(ApiResponse.Ok("Excluído com sucesso."));
 
-                // mapeia erro conhecido do serviço para mensagem amigável
                 var msg = string.IsNullOrWhiteSpace(resp.Message)
                     ? "Não foi possível excluir o registro."
                     : resp.Message;
@@ -192,10 +188,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     var resp = await _service.DeleteByTokenAsync(token, userId);
                     if (resp.Success) ok++; else fail++;
                 }
-                catch
-                {
-                    fail++;
-                }
+                catch { fail++; }
             }
 
             var allOk = fail == 0;
@@ -203,34 +196,20 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 ? $"Exclusão concluída. OK {ok}."
                 : $"Exclusão concluída com falhas. OK {ok} | Falhas {fail}.";
 
-            return Ok(new
-            {
-                success = allOk,
-                ok,
-                fail,
-                message
-            });
+            return Ok(new { success = allOk, ok, fail, message });
         }
 
-        // ===== Ações padrão (Create/Edit/Delete tradicionais) =====
-
-        // GET: /SEG/Usuario/Create
+        // ===== CRUD tradicionais =====
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public IActionResult Create() => View();
 
-        // POST: /SEG/Usuario/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_USUARIOS", "I")]
         public async Task<IActionResult> Create([Bind("Cdusuario,Dcusuario,Email_usuario,Tpusuario,Ativo")] Tuse1 usuario)
-        {
-            var resp = await _service.CreateAsync(usuario, ModelState);
-            return Json(resp);
-        }
+            => Json(await _service.CreateAsync(usuario, ModelState));
 
-        // GET: /SEG/Usuario/Edit/{id}
-        // Carrega o formulário de edição no modal (DataTables → AppModal.form)
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "A")]
         public async Task<IActionResult> Edit(string id)
@@ -241,24 +220,16 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             var db = HttpContext.RequestServices.GetRequiredService<RhSensoWeb.Data.ApplicationDbContext>();
             var entity = await db.Tuse1.AsNoTracking()
                                        .FirstOrDefaultAsync(x => x.Cdusuario == id);
-
-            if (entity is null)
-                return NotFound();
-
-            return View(entity); // retorna a View "Edit"
+            if (entity is null) return NotFound();
+            return View(entity);
         }
 
-        // POST: /SEG/Usuario/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_USUARIOS", "A")]
         public async Task<IActionResult> Edit(string id, [Bind("Cdusuario,Dcusuario,Email_usuario,Tpusuario,Ativo")] Tuse1 usuario)
-        {
-            var resp = await _service.EditAsync(id, usuario, ModelState);
-            return Json(resp);
-        }
+            => Json(await _service.EditAsync(id, usuario, ModelState));
 
-        // GET: /SEG/Usuario/Delete/{id}
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
         public async Task<IActionResult> Delete(string id)
@@ -270,14 +241,12 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return View(usuario);
         }
 
-        // POST: /SEG/Usuario/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_USUARIOS", "E")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var db = HttpContext.RequestServices.GetRequiredService<RhSensoWeb.Data.ApplicationDbContext>();
-
             try
             {
                 var usuario = await db.Tuse1.FindAsync(id);
@@ -297,11 +266,9 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 _logger.LogError(ex, "Erro ao excluir usuário {Id}", id);
                 TempData["ErrorMessage"] = "Erro ao excluir o usuário. Verifique dependências.";
             }
-
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: /SEG/Usuario/HealthCheck
         [HttpGet]
         [RequirePermission("SEG", "SEG_USUARIOS", "C")]
         public async Task<IActionResult> HealthCheck()
@@ -318,7 +285,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             return p?.GetValue(obj)?.ToString();
         }
-
         private static bool GetBool(object obj, string prop)
         {
             var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);

@@ -6,7 +6,6 @@ using RhSensoWeb.Common;
 using RhSensoWeb.Models; // Tuse1
 using RhSensoWeb.Areas.SEG.DTOs; // UsuarioListItemDto
 
-
 namespace RhSensoWeb.Areas.SEG.Services
 {
     public interface IUsuarioService

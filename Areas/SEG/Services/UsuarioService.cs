@@ -3,13 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using RhSensoWeb.Common;
+using RhSensoWeb.Common.Tokens;         // << usa RowKey genérico
 using RhSensoWeb.Data;
-using RhSensoWeb.Models;                  // Tuse1
-using RhSensoWeb.Services.Security;       // IRowTokenService
+using RhSensoWeb.Models;                 // Tuse1
+using RhSensoWeb.Services.Security;      // IRowTokenService
+using RhSensoWeb.Support;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace RhSensoWeb.Areas.SEG.Services
 {
@@ -35,9 +37,6 @@ namespace RhSensoWeb.Areas.SEG.Services
             _cache = cache;
         }
 
-        // payload usado nos tokens opacos
-        public sealed record RowKeys(string Cdusuario);
-
         // ===== LISTAGEM PARA DATATABLES =====
         public async Task<ApiResponse<IEnumerable<DTOs.UsuarioListItemDto>>> GetDataAsync(string userId)
         {
@@ -53,6 +52,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 {
                     var id = (r.Cdusuario ?? string.Empty).Trim();
                     var tipoDesc = (r.Tpusuario?.ToString() == "1") ? "Empregado" : "Terceiro";
+
                     return new DTOs.UsuarioListItemDto(
                         cdusuario: id,
                         dcusuario: r.Dcusuario ?? string.Empty,
@@ -60,8 +60,8 @@ namespace RhSensoWeb.Areas.SEG.Services
                         tpusuario: r.Tpusuario?.ToString() ?? string.Empty,
                         tipo_desc: tipoDesc,
                         ativo: r.Ativo,
-                        editToken: _rowToken.Protect(new RowKeys(id), PurposeEdit, userId, TimeSpan.FromMinutes(10)),
-                        deleteToken: _rowToken.Protect(new RowKeys(id), PurposeDelete, userId, TimeSpan.FromMinutes(10))
+                        editToken: _rowToken.Protect(new RowKey(id), PurposeEdit, userId, TimeSpan.FromMinutes(10)),
+                        deleteToken: _rowToken.Protect(new RowKey(id), PurposeDelete, userId, TimeSpan.FromMinutes(10))
                     );
                 });
 
@@ -125,7 +125,7 @@ namespace RhSensoWeb.Areas.SEG.Services
         public async Task<ApiResponse> CreateAsync(Tuse1 usuario, ModelStateDictionary modelState)
         {
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorsDictionary()); // << FIX
 
             try
             {
@@ -134,7 +134,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 if (existe)
                 {
                     modelState.AddModelError(nameof(Tuse1.Cdusuario), "Já existe um usuário com este código.");
-                    return ApiResponse.Fail("Já existe um usuário com este código.", modelState.ToErrorDictionary());
+                    return ApiResponse.Fail("Já existe um usuário com este código.", modelState.ToErrorsDictionary()); // << FIX
                 }
 
                 usuario.Cdusuario = id; // normaliza
@@ -158,7 +158,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 return ApiResponse.Fail("Registro inválido (ID divergente).");
 
             if (!modelState.IsValid)
-                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorDictionary());
+                return ApiResponse.Fail("Verifique os campos destacados.", modelState.ToErrorsDictionary()); // << FIX
 
             try
             {
@@ -187,11 +187,11 @@ namespace RhSensoWeb.Areas.SEG.Services
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
+                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKey>(token); // << RowKey
                 if (purpose != PurposeEdit || tokenUser != userId)
                     return (ApiResponse.Fail("Token inválido."), null);
 
-                var entidade = await _db.Tuse1.FindAsync(keys.Cdusuario);
+                var entidade = await _db.Tuse1.FindAsync(keys.Id); // << usa Id
                 if (entidade is null)
                     return (ApiResponse.Fail("Usuário não encontrado."), null);
 
@@ -209,18 +209,18 @@ namespace RhSensoWeb.Areas.SEG.Services
         {
             try
             {
-                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKeys>(token);
+                var (keys, purpose, tokenUser) = _rowToken.Unprotect<RowKey>(token); // << RowKey
                 if (purpose != PurposeDelete || tokenUser != userId)
                     return ApiResponse.Fail("Token inválido.");
 
-                var entidade = await _db.Tuse1.FindAsync(keys.Cdusuario);
+                var entidade = await _db.Tuse1.FindAsync(keys.Id); // << usa Id
                 if (entidade is null)
                     return ApiResponse.Fail("Usuário não encontrado.");
 
                 _db.Tuse1.Remove(entidade);
                 await _db.SaveChangesAsync();
 
-                _logger.LogInformation("Usuário excluído com sucesso: {Id}", keys.Cdusuario);
+                _logger.LogInformation("Usuário excluído com sucesso: {Id}", keys.Id);
                 return ApiResponse.Ok("Excluído com sucesso.");
             }
             catch (DbUpdateException ex)

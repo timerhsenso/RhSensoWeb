@@ -1,8 +1,0 @@
-@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
-@{ var tokens = Xsrf.GetAndStoreTokens(Context); }
-<meta name="request-verification-token" content="@tokens.RequestToken" />
-<link href="/css/crud.css" rel="stylesheet" asp-append-version="true" />
-<script type="module">
-  import { ensureAjaxSetup } from "/js/core/http.js";
-  ensureAjaxSetup();
-</script>

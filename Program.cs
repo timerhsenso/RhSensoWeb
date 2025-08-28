@@ -5,8 +5,10 @@ using RhSensoWeb.Services.Security;
 using Serilog;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Mvc; // NEW (para AutoValidateAntiforgeryTokenAttribute)
-using RhSensoWeb.Areas.SEG.Services; // NEW (Service da área SEG)
+using Microsoft.AspNetCore.Mvc;       // AutoValidateAntiforgeryTokenAttribute
+using RhSensoWeb.Middleware;          // Middleware global de exceções
+using RhSensoWeb.Areas.SEG.Services;  // Services da área SEG
+using RhSensoWeb.Areas.SYS.Services;  // << NEW: Service da área SYS/Taux1
 
 namespace RhSensoWeb
 {
@@ -36,11 +38,12 @@ namespace RhSensoWeb
                     .AddControllersWithViews(options =>
                     {
                         // Aplica Anti-CSRF globalmente a POST/PUT/PATCH/DELETE
-                        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()); // NEW (opcional, recomendado)
+                        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
                     })
                     .AddJsonOptions(o =>
                     {
-                        o.JsonSerializerOptions.PropertyNamingPolicy = null;      // PascalCase
+                        // Mantém padrão PascalCase (compatível com front atual)
+                        o.JsonSerializerOptions.PropertyNamingPolicy = null;
                         o.JsonSerializerOptions.DictionaryKeyPolicy = null;
                     });
 
@@ -65,7 +68,7 @@ namespace RhSensoWeb
                     // Interceptor de SQL com contexto da requisição
                     options.AddInterceptors(sp.GetRequiredService<SqlLoggingInterceptor>());
 
-                    // Log do EF (ajuste nível em prod)
+                    // Log do EF (ajuste nível em produção)
                     options.LogTo(Console.WriteLine, LogLevel.Information);
                 });
 
@@ -75,26 +78,21 @@ namespace RhSensoWeb
                 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                     .AddCookie(options =>
                     {
-                        // FIX: alinhar rotas com a área SEG (você usa /SEG/Account/...)
+                        // Alinhar rotas com a área SEG
                         options.LoginPath = "/SEG/Account/Login";
                         options.LogoutPath = "/SEG/Account/Logout";
-                        //options.AccessDeniedPath = "/Account/AccessDenied";
                         options.AccessDeniedPath = "/Error/Error403";
 
-
-                        options.ExpireTimeSpan = TimeSpan.FromHours(2); // mantido
+                        options.ExpireTimeSpan = TimeSpan.FromHours(2);
                         options.SlidingExpiration = true;
                     });
 
                 // =======================
                 // SESSÃO
                 // =======================
-                // ADD: cache distribuído em memória (Session depende de IDistributedCache)
                 builder.Services.AddDistributedMemoryCache();
-
                 builder.Services.AddSession(options =>
                 {
-                    // FIX: sessão muito curta (2 min) causava "quedas" e AccessDenied; aumentamos para 2h
                     options.IdleTimeout = TimeSpan.FromHours(2);
                     options.Cookie.Name = ".RhSensoWeb.Session";
                     options.Cookie.HttpOnly = true;
@@ -110,7 +108,7 @@ namespace RhSensoWeb
                 // DATA PROTECTION
                 // =======================
                 builder.Services.AddDataProtection();
-                // Nota: em produção/ambiente com mais de uma instância, considere persistir as chaves (FileSystem/Blob/Redis).
+                // Nota: em ambiente multi-instância, persista as chaves (FileSystem/Blob/Redis).
 
                 // =======================
                 // SERVIÇOS DE SEGURANÇA / UTIL
@@ -119,13 +117,21 @@ namespace RhSensoWeb
                 builder.Services.AddMemoryCache();
 
                 // =======================
-                // SEG – Services da área (NEW)
+                // SEG – Services da área
                 // =======================
-                builder.Services.AddScoped<ITsistemaService, TsistemaService>(); // NEW
-
-                builder.Services.AddScoped<IUsuarioService, UsuarioService>();
-
+                builder.Services.AddScoped<ITsistemaService, TsistemaService>();
+                builder.Services.AddScoped<IUsuarioService, UsuarioService>();     // Usa UpdateAtivoPolicy no controller de usuário. :contentReference[oaicite:2]{index=2}
                 builder.Services.AddScoped<IBtfuncaoService, BtfuncaoService>();
+
+                // =======================
+                // SYS – Services da área (Taux1)  << NEW
+                // =======================
+                builder.Services.AddScoped<ITaux1Service, Taux1Service>();         // Controller revisado usa RequirePermission/tokens como Usuário.
+
+                // =======================
+                // MIDDLEWARES (DI)
+                // =======================
+                builder.Services.AddScoped<ExceptionHandlingMiddleware>();         // registra IMiddleware
 
                 // =======================
                 // RATE LIMITER
@@ -156,6 +162,12 @@ namespace RhSensoWeb
 
                 var app = builder.Build();
 
+                // =======================
+                // EXCEÇÕES (GLOBAL) — deve vir PRIMEIRO no pipeline
+                // =======================
+                app.UseMiddleware<ExceptionHandlingMiddleware>();                  // JSON 500 padronizado
+                app.UseSerilogRequestLogging();                                    // log de cada request
+
                 // Header de ambiente em todas as respostas
                 app.Use(async (ctx, next) =>
                 {
@@ -168,18 +180,13 @@ namespace RhSensoWeb
                 RhSensoWeb.Helpers.ConstanteHelper.Configure(accessor);
 
                 // =======================
-                // ERROS
+                // ERROS HTTP (não-exceções) + HSTS
                 // =======================
-                var showOriginalErrors = builder.Configuration.GetValue<bool>("Errors:ShowOriginalErrors");
-                if (app.Environment.IsDevelopment() || showOriginalErrors)
+                app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
+                if (!app.Environment.IsDevelopment())
                 {
-                    app.UseDeveloperExceptionPage();
-                }
-                else
-                {
-                    app.UseExceptionHandler("/Error/500");
-                    app.UseStatusCodePagesWithReExecute("/Error/{0}");
-                    app.UseHsts();
+                    app.UseHsts();                                               // << move para antes do redirect (recomendado)
                 }
 
                 // =======================
@@ -187,11 +194,13 @@ namespace RhSensoWeb
                 // =======================
                 app.UseHttpsRedirection();
                 app.UseStaticFiles();
+
                 app.UseRouting();
 
-                app.UseSession();          // OK: antes de Authentication/Authorization se você lê Session em filtros
+                // Ordem: Session -> Auth -> RateLimiter -> Authorization
+                app.UseSession();          // lê sessão em filtros
                 app.UseAuthentication();
-                app.UseRateLimiter();
+                app.UseRateLimiter();      // usa Identity.Name quando houver (vide Usuario/Tsistema) :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
                 app.UseAuthorization();
 
                 // =======================

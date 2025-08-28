@@ -1,16 +1,22 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using RhSensoWeb.Areas.SYS.Taux1.DTOs;
+// Areas/SYS/Services/ITaux1Service.cs
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using RhSensoWeb.Common;
+using RhSensoWeb.Models;
 
-namespace RhSensoWeb.Areas.SYS.Taux1.Services
+namespace RhSensoWeb.Areas.SYS.Services
 {
     public interface ITaux1Service
     {
-        Task<(IEnumerable<Taux1Dto> items, int total, int filtered)> GetPageAsync(DataTableRequest req);
-        Task<Taux1Dto?> GetAsync(string id);
-        Task CreateAsync(Taux1Dto dto);
-        Task UpdateAsync(string id, Taux1Dto dto);
-        Task DeleteAsync(string id);
-        Task DeleteBatchAsync(IEnumerable<string> ids);
+        Task<ApiResponse<IEnumerable<Taux1>>> GetDataAsync(string userId);
+        Task<ApiResponse> CreateAsync(Taux1 entity, ModelStateDictionary modelState);
+        Task<ApiResponse> EditAsync(string id, Taux1 entity, ModelStateDictionary modelState);
+
+        Task<(ApiResponse resp, Taux1? entidade)> GetForSafeEditAsync(string token, string userId);
+        Task<ApiResponse> DeleteByTokenAsync(string token, string userId);
+
+        Task<Taux1?> GetByIdAsync(string id);
+        Task<ApiResponse> DeleteByIdAsync(string id);
+
+        Task<ApiResponse<int>> HealthCheckAsync();
     }
 }

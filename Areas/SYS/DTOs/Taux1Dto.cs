@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RhSensoWeb.Areas.SYS.Taux1.DTOs
+namespace RhSensoWeb.Areas.SYS.DTOs
 {
     public class Taux1Dto
     {

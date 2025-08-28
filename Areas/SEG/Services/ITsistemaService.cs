@@ -1,4 +1,3 @@
-// Areas/SEG/Services/ITsistemaService.cs
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using RhSensoWeb.Common;
 using RhSensoWeb.Models;

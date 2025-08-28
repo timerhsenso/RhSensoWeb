@@ -6,6 +6,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 
 using RhSensoWeb.Common;
+using RhSensoWeb.Common.Tokens;         // << NEW: RowKey genérico
 using RhSensoWeb.Models;
 using RhSensoWeb.Filters;              // RequirePermission
 using RhSensoWeb.Services.Security;    // IRowTokenService
@@ -34,26 +35,13 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             _cache = cache;
         }
 
-        // ===== Payload do token p/ ações de linha =====
-        public sealed record RowKeys(string Cdsistema);
-
         // GET: /SEG/Tsistema
-        // Abrir tela => Consultar (C)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "C")]
-        public IActionResult Index()
-        {
-            // (Opcional) Se quiser sinalizar permissões para a View:
-            // var acts = PermissionAccessHelper.GetActions(HttpContext, "SEG", "SEG_FM_TSISTEMA");
-            // ViewBag.CanCreate = acts.Contains("I");
-            // ViewBag.CanEdit   = acts.Contains("A");
-            // ViewBag.CanDelete = acts.Contains("E");
-            return View();
-        }
+        public IActionResult Index() => View();
 
         // GET: /SEG/Tsistema/GetData
         // Retorno para DataTables: { data: [...] }
-        // Listar => Consultar (C)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "C")]
         public async Task<IActionResult> GetData()
@@ -63,10 +51,9 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             if (!result.Success)
                 return Json(new { data = new List<object>(), error = result.Message });
 
-            // Padroniza o shape p/ o front e inclui tokens por linha
             try
             {
-                // Tenta converter para IEnumerable<Tsistema>
+                // Se vier a entidade tipada
                 var list = result.Data as IEnumerable<Tsistema>;
                 if (list is not null)
                 {
@@ -75,27 +62,17 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                         var id = (r.Cdsistema ?? string.Empty).Trim();
                         return new
                         {
-                            // nomes seguem camelCase se a app estiver com policy padrão
                             r.Cdsistema,
                             r.Dcsistema,
                             r.Ativo,
-                            // 👉 Tokens específicos por operação (compatível com tokenField = 'deleteToken')
-                            deleteToken = _rowToken.Protect(
-                                payload: new RowKeys(id),
-                                purpose: "Delete",
-                                userId: userId,
-                                ttl: TimeSpan.FromMinutes(10)),
-                            editToken = _rowToken.Protect(
-                                payload: new RowKeys(id),
-                                purpose: "Edit",
-                                userId: userId,
-                                ttl: TimeSpan.FromMinutes(10))
+                            deleteToken = _rowToken.Protect(new RowKey(id), "Delete", userId, TimeSpan.FromMinutes(10)),
+                            editToken = _rowToken.Protect(new RowKey(id), "Edit", userId, TimeSpan.FromMinutes(10))
                         };
                     });
                     return Json(new { data = dataTyped });
                 }
 
-                // Fallback genérico com reflexão (caso o service retorne uma projeção)
+                // Fallback genérico
                 var raw = (result.Data as IEnumerable<object>) ?? Enumerable.Empty<object>();
                 var data = raw.Select(o =>
                 {
@@ -105,16 +82,8 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                         Cdsistema = id,
                         Dcsistema = GetString(o, "Dcsistema"),
                         Ativo = GetBool(o, "Ativo"),
-                        deleteToken = _rowToken.Protect(
-                            payload: new RowKeys(id),
-                            purpose: "Delete",
-                            userId: userId,
-                            ttl: TimeSpan.FromMinutes(10)),
-                        editToken = _rowToken.Protect(
-                            payload: new RowKeys(id),
-                            purpose: "Edit",
-                            userId: userId,
-                            ttl: TimeSpan.FromMinutes(10))
+                        deleteToken = _rowToken.Protect(new RowKey(id), "Delete", userId, TimeSpan.FromMinutes(10)),
+                        editToken = _rowToken.Protect(new RowKey(id), "Edit", userId, TimeSpan.FromMinutes(10))
                     };
                 });
                 return Json(new { data });
@@ -122,13 +91,11 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Falha ao montar retorno do GetData de Tsistema.");
-                // Em caso de falha, devolve o data bruto para não quebrar o grid
                 return Json(new { data = result.Data });
             }
         }
 
         // POST: /SEG/Tsistema/UpdateAtivo
-        // Alterar => (A)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [EnableRateLimiting("UpdateAtivoPolicy")]
@@ -137,7 +104,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         {
             var userId = User?.Identity?.Name ?? "anon";
 
-            // Anti-double click / cooldown curto
+            // Anti-double click
             var cooldownKey = $"SEG:Tsistema:UpdateAtivo:{userId}:{id}";
             if (_cache.TryGetValue(cooldownKey, out _))
                 return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
@@ -152,7 +119,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         }
 
         // GET: /SEG/Tsistema/SafeEdit?token=...
-        // Editar => (A)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "A")]
         public async Task<IActionResult> SafeEdit([FromQuery] string token)
@@ -163,12 +129,10 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return View("Edit", entidade!);
         }
 
-        // DTOs padronizados
         public sealed class DeleteByTokenDto { public string Token { get; set; } = string.Empty; }
         public sealed class DeleteBatchDto { public List<string> Tokens { get; set; } = new(); }
 
         // POST: /SEG/Tsistema/DeleteByToken
-        // Excluir => (E)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "E")]
@@ -181,7 +145,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 if (resp.Success)
                     return Ok(ApiResponse.Ok("Excluído com sucesso."));
 
-                // mapeia erro conhecido do serviço para mensagem amigável
                 var msg = string.IsNullOrWhiteSpace(resp.Message)
                     ? "Não foi possível excluir o registro."
                     : resp.Message;
@@ -196,7 +159,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         }
 
         // POST: /SEG/Tsistema/DeleteBatch
-        // Excluir em lote => (E)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "E")]
@@ -226,25 +188,14 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 ? $"Exclusão concluída. OK {ok}."
                 : $"Exclusão concluída com falhas. OK {ok} | Falhas {fail}.";
 
-            return Ok(new
-            {
-                success = allOk,
-                ok,
-                fail,
-                message
-            });
+            return Ok(new { success = allOk, ok, fail, message });
         }
 
         // ===== Ações padrão (Create/Edit/Delete tradicionais) =====
-
-        // GET: /SEG/Tsistema/Create
-        // Incluir => (I)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "I")]
         public IActionResult Create() => View();
 
-        // POST: /SEG/Tsistema/Create
-        // Incluir => (I)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "I")]
@@ -254,8 +205,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return Json(resp);
         }
 
-        // POST: /SEG/Tsistema/Edit/{id}
-        // Alterar => (A)
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "A")]
@@ -265,8 +214,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return Json(resp);
         }
 
-        // GET: /SEG/Tsistema/Delete/{id} (confirmação)
-        // Excluir => (E)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "E")]
         public async Task<IActionResult> Delete(string id)
@@ -278,8 +225,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return View(sistema);
         }
 
-        // POST: /SEG/Tsistema/Delete/{id} (confirmação)
-        // Excluir => (E)
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "E")]
@@ -310,8 +255,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: /SEG/Tsistema/HealthCheck
-        // Consultar => (C)
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "C")]
         public async Task<IActionResult> HealthCheck()
@@ -322,13 +265,12 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 : new { success = false, message = resp.Message });
         }
 
-        // ===== Helpers =====
+        // Helpers
         private static string? GetString(object obj, string prop)
         {
             var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             return p?.GetValue(obj)?.ToString();
         }
-
         private static bool GetBool(object obj, string prop)
         {
             var p = obj.GetType().GetProperty(prop, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
@@ -340,9 +282,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return false;
         }
 
-
-        // GET: /SEG/Tsistema/Edit/{id}
-        // Carrega o formulário de edição no modal (DataTables → AppModal.form)
+        // GET: /SEG/Tsistema/Edit/{id} — carrega form no modal
         [HttpGet]
         [RequirePermission("SEG", "SEG_FM_TSISTEMA", "A")]
         public async Task<IActionResult> Edit(string id)
@@ -357,8 +297,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             if (entity is null)
                 return NotFound();
 
-            return View(entity); // retorna a View "Edit"
+            return View(entity);
         }
-
     }
 }
