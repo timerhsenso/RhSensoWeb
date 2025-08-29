@@ -1,54 +1,23 @@
 @model RhSensoWeb.Areas.SYS.DTOs.Taux1Dto
+@{
+    ViewData["Title"] = "Criar Tabela Auxiliar";
+    ViewBag.IsEdit = false;
+}
 
-<form id="formCreate" method="post" action="@Url.Action("Create","Taux1", new { area="SYS" })">
-  @Html.AntiForgeryToken()
+<h1 class="mb-3">@ViewData["Title"]</h1>
 
-  <div class="row g-3">
-    <div class="col-md-3">
-      <label asp-for="Cdtptabela" class="form-label"></label>
-      <input asp-for="Cdtptabela" class="form-control" maxlength="2" />
-      <span asp-validation-for="Cdtptabela" class="text-danger"></span>
+<form asp-area="SYS" asp-controller="Taux1" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <partial name="_FormFields" model="Model" />
+
+    <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Salvar</button>
+        <a asp-area="SYS" asp-controller="Taux1" asp-action="Index" class="btn btn-secondary">Voltar</a>
     </div>
-    <div class="col-md-9">
-      <label asp-for="Dctabela" class="form-label"></label>
-      <input asp-for="Dctabela" class="form-control" maxlength="60" />
-      <span asp-validation-for="Dctabela" class="text-danger"></span>
-    </div>
-  </div>
-
-  <div class="mt-4 d-flex justify-content-end gap-2">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-    <button type="submit" class="btn btn-primary">Salvar</button>
-  </div>
 </form>
 
-<script>
-  (function(){
-    const $form = $('#formCreate');
-    $form.on('submit', async function(e){
-      e.preventDefault();
-      const token = document.querySelector('meta[name="request-verification-token"]')?.content;
-      const formData = $form.serialize();
-      const resp = await fetch($form.attr('action'), {
-        method: 'POST',
-        headers: { 'RequestVerificationToken': token, 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: formData
-      });
-      const json = await resp.json();
-      if(json?.success){
-        $('#formModal').modal('hide');
-        $('#gridTaux1').DataTable().ajax.reload(null, false);
-      }else{
-        alert(json?.message || 'Falha ao salvar.');
-      }
-    });
-
-    // força trim no client
-    $form.find('[name="Cdtptabela"], [name="Dctabela"]').each(function(){
-      $(this).rules && $(this).rules('add', {
-        required: true,
-        normalizer: function(v){ return (v||'').trim(); }
-      });
-    });
-  })();
-</script>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,28 @@
+@model RhSensoWeb.Areas.SYS.DTOs.Taux1Dto
+@{
+    // Define se é edição (Edit) para travar a chave sem causar RZ1031
+    var isEdit = (ViewBag.IsEdit as bool?) ?? false;
+}
+
+<div class="row g-3">
+    <div class="col-md-3">
+        <label asp-for="Cdtptabela" class="form-label"></label>
+        @if (isEdit)
+        {
+            <!-- Exibe a chave readonly + hidden para postar o valor -->
+            <input asp-for="Cdtptabela" class="form-control" readonly />
+            <input type="hidden" asp-for="Cdtptabela" />
+        }
+        else
+        {
+            <input asp-for="Cdtptabela" class="form-control" />
+        }
+        <span asp-validation-for="Cdtptabela" class="text-danger"></span>
+    </div>
+
+    <div class="col-md-9">
+        <label asp-for="Dctabela" class="form-label"></label>
+        <input asp-for="Dctabela" class="form-control" />
+        <span asp-validation-for="Dctabela" class="text-danger"></span>
+    </div>
+</div>

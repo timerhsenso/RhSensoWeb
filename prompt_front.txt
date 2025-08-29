@@ -231,7 +231,7 @@
 ```html
 @{
     ViewData["Title"] = "Grid Genérica";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+        Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
 <!-- Estrutura do Card Principal -->
