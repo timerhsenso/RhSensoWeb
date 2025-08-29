@@ -5,12 +5,12 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Reflection;
 
 using RhSensoWeb.Common;
-using RhSensoWeb.Models;                   // Taux1
-using RhSensoWeb.Filters;                  // RequirePermission
-using RhSensoWeb.Services.Security;        // IRowTokenService
-using RhSensoWeb.Areas.SYS.Services;       // ITaux1Service
-using RhSensoWeb.Data;                     // ApplicationDbContext
-
+using RhSensoWeb.Models;
+using RhSensoWeb.Filters;
+using RhSensoWeb.Services.Security;
+using RhSensoWeb.Areas.SYS.Services;
+using RhSensoWeb.Areas.SYS.DTOs;          // <- ADICIONE ESTA LINHA
+using RhSensoWeb.Data;
 namespace RhSensoWeb.Areas.SYS.Controllers
 {
     [Area("SYS")]
@@ -178,6 +178,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             => Json(await _service.CreateAsync(entity, ModelState));
 
         // ====== EDIT (GET/POST) ======
+        // No Controller - corrigir o Edit(GET)
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
         public async Task<IActionResult> Edit(string id)
@@ -192,7 +193,14 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             if (entity is null)
                 return NotFound();
 
-            return View(entity);
+            // Mapeamento manual (ou use AutoMapper)
+            var dto = new Taux1Dto
+            {
+                Cdtptabela = entity.Cdtptabela,
+                Dctabela = entity.Dctabela
+            };
+
+            return View(dto);
         }
 
         [HttpPost]
