@@ -10,6 +10,8 @@ using RhSensoWeb.Data;
 using RhSensoWeb.Models;
 using RhSensoWeb.Services.Security;
 using RhSensoWeb.Support;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace RhSensoWeb.Areas.SEG.Services
 {
@@ -22,6 +24,15 @@ namespace RhSensoWeb.Areas.SEG.Services
 
         private const string PurposeEdit = "Edit";
         private const string PurposeDelete = "Delete";
+
+        // === Locks por registro e controle de intervalo mínimo ===
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _rowLocks = new();
+        private static readonly ConcurrentDictionary<string, DateTimeOffset> _lastChange = new();
+
+        private static SemaphoreSlim GetRowLock(string key)
+            => _rowLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
+
 
         public TsistemaService(
             ApplicationDbContext db,
@@ -76,27 +87,51 @@ namespace RhSensoWeb.Areas.SEG.Services
                 if (string.IsNullOrWhiteSpace(id))
                     return ApiResponse.Fail("ID do sistema é obrigatório.");
 
-                // Cooldown (flip-flop)
-                var cooldownKey = $"SEG:Tsistema:UpdateAtivo:{userId}:{id}";
-                if (_cache.TryGetValue(cooldownKey, out _))
-                    return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
+                // Exclusão mútua por registro (evita duas reqs simultâneas no mesmo ID)
+                var rowKey = id;
+                var gate = GetRowLock(rowKey);
+                if (!await gate.WaitAsync(0))
+                    return ApiResponse.Fail("Outra alteração para este sistema já está em andamento. Aguarde.");
 
-                _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
+                try
                 {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
-                });
+                    // Intervalo mínimo entre mudanças no MESMO registro (2s)
+                    var now = DateTimeOffset.UtcNow;
+                    if (_lastChange.TryGetValue(rowKey, out var last) && (now - last) < TimeSpan.FromSeconds(2))
+                        return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
 
-                var entidade = await _db.Tsistema.FirstOrDefaultAsync(x => x.Cdsistema == id);
-                if (entidade is null)
-                    return ApiResponse.Fail("Sistema não encontrado.");
+                    // Cooldown leve por usuário (defesa extra)
+                    var cooldownKey = $"SEG:Tsistema:UpdateAtivo:{userId}:{id}";
+                    if (_cache.TryGetValue(cooldownKey, out _))
+                        return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
+                    _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
+                    });
 
-                if (entidade.Ativo == ativo)
-                    return ApiResponse.Ok("Status já estava atualizado.");
+                    // Carrega e valida
+                    var entidade = await _db.Tsistema.FirstOrDefaultAsync(x => x.Cdsistema == id);
+                    if (entidade is null)
+                        return ApiResponse.Fail("Sistema não encontrado.");
 
-                entidade.Ativo = ativo;
-                await _db.SaveChangesAsync();
+                    // Idempotência — se já está igual, não grava
+                    if (entidade.Ativo == ativo)
+                        return ApiResponse.Ok("Status já estava atualizado.");
 
-                return ApiResponse.Ok(ativo ? "Sistema ativado com sucesso!" : "Sistema desativado com sucesso!");
+                    // Aplica mudança e persiste
+                    entidade.Ativo = ativo;
+                    await _db.SaveChangesAsync();
+
+                    // Marca último horário de mudança para este registro
+                    _lastChange[rowKey] = now;
+
+                    // Mensagem amigável
+                    return ApiResponse.Ok(ativo ? "Sistema ativado com sucesso!" : "Sistema desativado com sucesso!");
+                }
+                finally
+                {
+                    gate.Release();
+                }
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -114,6 +149,7 @@ namespace RhSensoWeb.Areas.SEG.Services
                 return ApiResponse.Fail("Erro interno do servidor.");
             }
         }
+
 
         // ===== CREATE =====
         public async Task<ApiResponse> CreateAsync(Tsistema sistema, ModelStateDictionary modelState)

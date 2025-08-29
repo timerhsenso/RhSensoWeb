@@ -104,19 +104,29 @@ namespace RhSensoWeb.Areas.SEG.Controllers
         {
             var userId = User?.Identity?.Name ?? "anon";
 
-            // Anti-double click
+            // (Opcional) Cooldown local — pode remover se preferir deixar só no Service
             var cooldownKey = $"SEG:Tsistema:UpdateAtivo:{userId}:{id}";
             if (_cache.TryGetValue(cooldownKey, out _))
                 return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
-
             _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
             });
 
             var resp = await _service.UpdateAtivoAsync(id, ativo, userId);
-            return Json(resp);
+
+            // Detecta NO-OP pela mensagem padronizada do Service
+            var noop = string.Equals(resp?.Message, "Status já estava atualizado.", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(resp?.Message, "Sem alteração (já estava nesse estado).", StringComparison.OrdinalIgnoreCase);
+
+            return Json(new
+            {
+                success = resp?.Success ?? false,
+                message = resp?.Message ?? "Erro ao processar a solicitação.",
+                noop
+            });
         }
+
 
         // GET: /SEG/Tsistema/SafeEdit?token=...
         [HttpGet]

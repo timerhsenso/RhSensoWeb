@@ -63,6 +63,10 @@
    antes dos scripts do rodapé. Se não estiverem, o DTUtil cai em fallback de navegação (sem modal). *@
 
 @section Scripts {
+
+      <script src="~/js/crud-toggle.js" asp-append-version="true" defer></script>
+
+
     <script>
         $(function () {
             const perms = @Html.Raw(JsonSerializer.Serialize(perms));
