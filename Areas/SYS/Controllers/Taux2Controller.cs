@@ -39,26 +39,35 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         private sealed record RowKeys(string Cdtptabela, string Cdsituacao);
 
         // ====== VIEW PRINCIPAL ======
+        // ===== VIEW PRINCIPAL =====
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "C")]
-        public IActionResult Index(string? cdtptabela = null)
+        public IActionResult Index(string cdtptabela = null, string dctabela = null)
         {
-            // prioriza querystring; se vier vazio, tenta TempData (POST do pai)
-            cdtptabela ??= TempData["Taux2.Filter.Cdtptabela"] as string;
+            // 1) se não vier pela querystring, tenta pegar do TempData (POST do pai)
+            cdtptabela ??= TempData["Taux2.Filter.cdtptabela"] as string;
+            dctabela ??= TempData["Taux2.Filter.dctabela"] as string;
+
+            // 2) passa para a View
             ViewBag.CdtptabelaFiltro = cdtptabela?.Trim();
+            ViewBag.SubTitle = string.IsNullOrWhiteSpace(dctabela) ? "" : dctabela.Trim();
+            ViewBag.SubTitle = (!string.IsNullOrWhiteSpace(cdtptabela) && !string.IsNullOrWhiteSpace(dctabela))
+                   ? $"{cdtptabela} - {dctabela}"
+                   : (dctabela ?? "");
             return View();
         }
+
 
         // Recebe POST do Taux1 e salva filtro para o próximo request
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult OpenFromParent(string cdtptabela)
+        public IActionResult OpenFromParent([FromForm] string cdtptabela, [FromForm] string dctabela)
         {
-            if (!string.IsNullOrWhiteSpace(cdtptabela))
-                TempData["Taux2.Filter.Cdtptabela"] = cdtptabela.Trim();
-
+            TempData["Taux2.Filter.cdtptabela"] = cdtptabela?.Trim();
+            TempData["Taux2.Filter.dctabela"] = dctabela?.Trim();
             return RedirectToAction(nameof(Index));
         }
+
 
         // ====== LISTAGEM PARA GRID ======
         [HttpGet]

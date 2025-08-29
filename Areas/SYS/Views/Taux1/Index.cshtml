@@ -8,8 +8,7 @@
     ViewBag.HabilitaBtnNovo = true;
     ViewBag.HabilitaBtnExportar = true;
     ViewBag.gridName = "#gridTaux1";
-    ViewBag.Title = "Tabelas Auxiliares";
-    ViewBag.SubTitle = "Comum";
+    ViewBag.Title = "Tabelas Auxiliares";    
     Layout = "~/Views/Shared/_VerticalLayout.cshtml";
 }
 
@@ -177,11 +176,17 @@
                 .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
             });
 
-            DTUtil.actions.on('Taux1', 'gotoTaux2', async ({ id/*, meta, dt, button */ }) => {
-                document.getElementById('gotoTaux2_cdtptabela').value = id;
-                document.getElementById('frmGotoTaux2').submit();
+        DTUtil.actions.on('Taux1', 'gotoTaux2', async ({ id, dt, button }) => {
+            // pega o objeto da linha onde o botão foi clicado
+            const row = dt.row($(button).closest('tr')).data() || {};
+            const dctabela = row?.Dctabela ?? '';
 
-            });
+            // preenche os hiddens e envia o form
+            document.getElementById('gotoTaux2_cdtptabela').value = id;
+            document.getElementById('gotoTaux2_dctabela').value   = dctabela;
+
+            document.getElementById('frmGotoTaux2').submit();
+        });
 
             // ==========================================
             // 4) Busca / limpeza de busca
@@ -200,6 +205,7 @@
       class="d-inline">
     @Html.AntiForgeryToken()
     <input type="hidden" name="cdtptabela" id="gotoTaux2_cdtptabela">
+    <input type="hidden" name="dctabela" id="gotoTaux2_dctabela">
 </form>
 
 

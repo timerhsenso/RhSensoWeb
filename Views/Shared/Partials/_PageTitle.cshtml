@@ -8,7 +8,21 @@
 
 <div class="page-title-head d-flex align-items-center">
     <div class="flex-grow-1">
-        <h4 class="fs-sm text-uppercase fw-bold m-0"><i data-lucide="@icon" class="me-2"></i>@title</h4>
+        <h4 class="fs-sm text-uppercase fw-bold m-0"><i data-lucide="@icon" class="me-2"></i>@title
+
+
+            @if (!string.IsNullOrWhiteSpace(subtitle))
+            {
+                <span class="ms-1">
+                    <i data-lucide="file-stack"></i> @subtitle
+                </span>
+            }
+
+            
+
+
+
+        </h4>
     </div>
 
     <div class="text-end">
