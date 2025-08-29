@@ -2,14 +2,15 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using System.Reflection;
-
-using RhSensoWeb.Common;
-using RhSensoWeb.Models;                   // Taux2
-using RhSensoWeb.Filters;                  // RequirePermission
-using RhSensoWeb.Services.Security;        // IRowTokenService
 using RhSensoWeb.Areas.SYS.Services;       // ITaux2Service
+using RhSensoWeb.Common;
 using RhSensoWeb.Data;                     // ApplicationDbContext
+using RhSensoWeb.Filters;                  // RequirePermission
+using RhSensoWeb.Models;                   // Taux2
+using RhSensoWeb.Services.Security;        // IRowTokenService
+using System.Reflection;
+using Microsoft.AspNetCore.RateLimiting;
+
 
 namespace RhSensoWeb.Areas.SYS.Controllers
 {
@@ -292,6 +293,36 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             if (entity is null) return NotFound();
             return View(entity);
         }
+
+        // ====== TOGGLE ATIVO (AJAX) ======
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [EnableRateLimiting("UpdateAtivoPolicy")]
+        [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
+        public async Task<IActionResult> UpdateAtivo([FromForm] string cdtptabela, [FromForm] string cdsituacao, [FromForm] bool ativo)
+        {
+            var userId = User?.Identity?.Name ?? "anon";
+
+            // (Opcional) pequeno cooldown local — pode remover se quiser deixar só no Service
+            var keyLocal = $"SYS:Taux2:UpdateAtivo:{userId}:{cdtptabela}|{cdsituacao}";
+            if (_cache.TryGetValue(keyLocal, out _))
+                return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
+            _cache.Set(keyLocal, 1, new MemoryCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2) });
+
+            var resp = await _service.UpdateAtivoAsync((cdtptabela, cdsituacao), ativo, userId);
+
+            // NO-OP se a mensagem for a padronizada do service
+            var noop = string.Equals(resp?.Message, "Status já estava atualizado.", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(resp?.Message, "Sem alteração (já estava nesse estado).", StringComparison.OrdinalIgnoreCase);
+
+            return Json(new
+            {
+                success = resp?.Success ?? false,
+                message = resp?.Message ?? "Erro ao processar a solicitação.",
+                noop
+            });
+        }
+
 
         // ====== HEALTH CHECK ======
         [HttpGet]

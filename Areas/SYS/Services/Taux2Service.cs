@@ -8,6 +8,10 @@ using RhSensoWeb.Data;
 using RhSensoWeb.Models;              // Taux2
 using RhSensoWeb.Services.Security;   // IRowTokenService
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Threading;
+using Microsoft.Extensions.Caching.Memory; // se ainda não tiver
+
 
 namespace RhSensoWeb.Areas.SYS.Services
 {
@@ -18,19 +22,30 @@ namespace RhSensoWeb.Areas.SYS.Services
         private readonly IRowTokenService _rowToken;
 
         public Taux2Service(
-            ApplicationDbContext db,
-            ILogger<Taux2Service> logger,
-            IRowTokenService rowToken)
+    ApplicationDbContext db,
+    ILogger<Taux2Service> logger,
+    IRowTokenService rowToken,
+    IMemoryCache cache)
         {
             _db = db;
             _logger = logger;
             _rowToken = rowToken;
+            _cache = cache;
         }
 
         private sealed record RowKeys(string Cdtptabela, string Cdsituacao);
 
         private const string PurposeEdit = "Edit";
         private const string PurposeDelete = "Delete";
+
+        private readonly IMemoryCache _cache;  // cooldown por usuário
+
+        // Locks e marcações por registro (chave = "cdtptabela|cdsituacao")
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _rowLocks = new();
+        private static readonly ConcurrentDictionary<string, DateTimeOffset> _lastChange = new();
+
+        private static string RowKeyOf(string k1, string k2) => $"{k1}|{k2}";
+        private static SemaphoreSlim GetRowLock(string key) => _rowLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
 
         // =======================
         // LISTAGEM
@@ -105,6 +120,76 @@ namespace RhSensoWeb.Areas.SYS.Services
                 return ApiResponse.Fail("Erro ao salvar o registro. Tente novamente.");
             }
         }
+
+
+        public async Task<ApiResponse> UpdateAtivoAsync((string cdtptabela, string cdsituacao) id, bool ativo, string userId)
+        {
+            var k1 = (id.cdtptabela ?? string.Empty).Trim();
+            var k2 = (id.cdsituacao ?? string.Empty).Trim();
+
+            if (string.IsNullOrWhiteSpace(k1) || string.IsNullOrWhiteSpace(k2))
+                return ApiResponse.Fail("ID do registro é obrigatório.");
+
+            // 1) Exclusão mútua por registro (evita corrida simultânea no mesmo item)
+            var rowKey = RowKeyOf(k1, k2);
+            var gate = GetRowLock(rowKey);
+            if (!await gate.WaitAsync(0))
+                return ApiResponse.Fail("Outra alteração para este registro já está em andamento. Aguarde.");
+
+            try
+            {
+                // 2) Janela mínima de 2s entre mudanças no MESMO registro
+                var now = DateTimeOffset.UtcNow;
+                if (_lastChange.TryGetValue(rowKey, out var last) && (now - last) < TimeSpan.FromSeconds(2))
+                    return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
+
+                // 3) Cooldown leve por usuário (defesa extra, sem mexer no banco)
+                var cooldownKey = $"SYS:Taux2:UpdateAtivo:{userId}:{rowKey}";
+                if (_cache.TryGetValue(cooldownKey, out _))
+                    return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
+                _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
+                });
+
+                // 4) Carrega e valida existência
+                var entidade = await _db.Taux2.FirstOrDefaultAsync(x => x.Cdtptabela == k1 && x.Cdsituacao == k2);
+                if (entidade is null)
+                    return ApiResponse.Fail("Registro não encontrado.");
+
+                // 5) Idempotência — não grava se já estiver no estado pedido
+                if (entidade.Ativo == ativo)
+                    return ApiResponse.Ok("Status já estava atualizado.");
+
+                // 6) Aplica mudança (prop. Ativo mapeia “S/N” em flativoaux)
+                entidade.Ativo = ativo;
+                await _db.SaveChangesAsync();
+
+                // 7) Marca último horário de mudança para este registro
+                _lastChange[rowKey] = now;
+
+                // 8) Log (apenas quando realmente mudou)
+                _logger.LogInformation("Taux2.UpdateAtivo OK {K1}-{K2} => {V}", k1, k2, ativo ? "S" : "N");
+
+                return ApiResponse.Ok(ativo ? "Situação ativada com sucesso!" : "Situação desativada com sucesso!");
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogError(ex, "Erro de banco ao alterar Ativo em Taux2 {K1}-{K2}", k1, k2);
+                return ApiResponse.Fail("Erro ao salvar o registro. Tente novamente.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro inesperado ao alterar Ativo em Taux2 {K1}-{K2}", k1, k2);
+                return ApiResponse.Fail("Erro interno do servidor.");
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }
+
+
 
         // =======================
         // EDIT

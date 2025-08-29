@@ -34,15 +34,16 @@
 
     // Parâmetros para o _TopbarSharedGrid
     ViewBag.aHref = icreateGet;            // fallback de navegação
-    ViewBag.dataContext = "Taux2";
+    ViewBag.dataContext = "Taux2";           // mesmo "context" do DTUtil.createAjaxDataTable
     ViewBag.dataTable = "#gridTaux2";      // seletor do DataTable para dar reload após salvar
-    ViewBag.dataUseModal = true;           // true = abrir no modal; false = navegar
-    ViewBag.dataTitle = "Nova Situação Auxiliar";  // título do modal
-    ViewBag.dataCreateGet = icreateGet;    // GET que renderiza o formulário (partial quando AJAX)
-    ViewBag.dataCreatePost = icreatePost;  // POST que grava
+    ViewBag.dataUseModal = true;                 // true = abrir no modal; false = navegar
+    ViewBag.dataTitle = "Nova Situação Auxiliar";       // título do modal
+    ViewBag.dataCreateGet = icreateGet;            // GET que renderiza o formulário (partial quando AJAX)
+    ViewBag.dataCreatePost = icreatePost;           // POST que grava
 }
 
 @await Html.PartialAsync("~/Views/Shared/Partials/_PageTitle.cshtml")
+
 @await Html.PartialAsync("~/Views/Shared/Partials/_TopBarShearhGrid.cshtml")
 
 <div class="card shadow-sm">
@@ -51,102 +52,165 @@
     </div>
 </div>
 
-@section scripts {
+@* Observação:
+   Os partials de modal (_FormModal.cshtml e _ConfirmModal.cshtml) devem estar inclusos UMA VEZ no layout (_VerticalLayout),
+   antes dos scripts do rodapé. Se não estiverem, o DTUtil cai em fallback de navegação (sem modal). *@
+
+@section Scripts {
+
+    <script src="~/js/crud-toggle.js" asp-append-version="true" defer></script>
+
+
     <script>
         $(function () {
             const perms = @Html.Raw(JsonSerializer.Serialize(perms));
 
-            const actions = [
-                ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
-                ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
-            ];
+           // Monte o array de ações de acordo com as permissões (sem "Detalhes")
+        const actions = [
+          ...(perms.canEdit   ? [{ name:'edit',   icon:'fa-pen',   class:'btn-outline-primary', title:'Editar'  }] : []),
+          ...(perms.canDelete ? [{ name:'delete', icon:'fa-trash', class:'btn-outline-danger',  title:'Excluir' }] : [])
+        ];
 
-            // =============================
-            // 1) DataTable (DTUtil v4)
-            // =============================
-            DTUtil.createAjaxDataTable({
-                table: '#gridTaux2',
-                context: 'Taux2',
-                useModal: true,
-                rowId: 'RowId',                 // Cdtptabela|Cdsituacao
-                tokenField: 'deleteToken',
-                exportName: 'SituacoesAuxiliares',
 
-                routes: {
-                    list: '/SYS/Taux2/GetData',
-                    createGet: '/SYS/Taux2/Create',
-                    createPost: '/SYS/Taux2/Create',
-                    editGet: '/SYS/Taux2/Edit/{id}',
-                    editPost: '/SYS/Taux2/Edit/{id}',
-                    deletePost: '/SYS/Taux2/DeleteByToken',
-                    deleteBatchPost: '/SYS/Taux2/DeleteBatch'
-                },
+          // =============================
+          // 1) DataTable (DTUtil v4)
+          // =============================
+          DTUtil.createAjaxDataTable({
+            table: '#gridTaux2',
+            context: 'Taux2',
+            useModal: true,
+            rowId: 'RowId',
+            tokenField: 'deleteToken', // se a API devolver "token", o handler abaixo faz fallback
+            exportName: 'SituacoesAuxiliares',
 
-                // Colunas (1ª = seleção; última = ações vêm do DTUtil)
-                fields: [
-                    { data: 'Cdtptabela', title: 'Cód. Tipo', width: '120px' },
-                    { data: 'Cdsituacao', title: 'Cód. Situação', width: '120px' },
-                    { data: 'Dcsituacao', title: 'Descrição' },
-                    { data: 'Noordem',    title: 'Ordem', width: '90px', render: d => d ?? '' },
-                    { data: 'Ativo',      title: 'Ativo', width: '90px', render: d => d ? 'Sim' : 'Não' }
-                ],
+            routes: {
+              list: '/SYS/Taux2/GetData',
+              createGet: '/SYS/Taux2/Create',
+              createPost: '/SYS/Taux2/Create',
+              editGet: '/SYS/Taux2/Edit/{id}',
+              editPost: '/SYS/Taux2/Edit/{id}',
+              deletePost: '/SYS/Taux2/DeleteByToken',
+              deleteBatchPost: '/SYS/Taux2/DeleteBatch',
+              updateAtivoPost: '/SYS/Taux2/UpdateAtivo'
+            },
 
-                actions: actions
-            });
+            // Colunas (a 1ª = seleção; a última = ações são geradas pelo DTUtil)
+            fields: [
+              { data: 'Cdtptabela', title: 'Cód. Tipo', width: '120px' },
+              { data: 'Cdsituacao', title: 'Cód. Situação', width: '120px' },
+              { data: 'Dcsituacao', title: 'Descrição' },
+              { data: 'Noordem', title: 'Ordem', width: '90px' },
+              { type: 'toggle', data: 'Ativo', title: 'Ativo' }
+            ],
 
-            // =============================
-            // 2) Handlers de ações
-            // =============================
-            DTUtil.actions.on('Taux2', 'delete', async ({ id, meta, dt, button }) => {
-                const row   = dt.row($(button).closest('tr')).data() || {};
-                const token = row?.[meta.tokenField] ?? row?.token ?? row?.deleteToken;
-                if (!token) return (window.AppNotifier ? AppNotifier.warn('Token ausente para exclusão.') : alert('Token ausente para exclusão.'));
+            actions: actions
 
-                const ok = window.AppModal?.confirm
-                    ? await AppModal.confirm('Excluir este registro?')
-                    : confirm('Excluir este registro?');
+          });
 
-                if (!ok) return;
+          // ==========================================
+          // 2) "Selecionar todos" (só 1ª coluna)
+          //    -> NÃO afeta o switch "Ativo"
+          // ==========================================
+          const $table = $('#gridTaux2');
 
-                $.ajax({
-                    url: meta.routes.deletePost,
-                    type: 'POST',
-                    contentType: 'application/json; charset=UTF-8',
-                    data: JSON.stringify({ token })
-                })
-                .done(() => {
-                    window.AppNotifier && AppNotifier.success('Excluído com sucesso.');
-                    dt.ajax.reload(null, false);
-                })
-                .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
-            });
+          // Atualiza estado (checked/indeterminate) do checkbox do cabeçalho
+          function updateHeaderState() {
+            const $rowChecks = $table.find('tbody td:first-child input.dt-row-select[type=checkbox]');
+            const $headCheck = $table.find('thead .check-all');
+            const total = $rowChecks.length;
+            const marc  = $rowChecks.filter(':checked').length;
 
-            // =============================
-            // 3) Busca / limpeza de busca
-            // =============================
-            DTUtil.bindInputSearch('#searchGrid', '#gridTaux2');
-            DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridTaux2', { reload: true, resetPaging: true });
+            if (!total) {
+              $headCheck.prop('checked', false).prop('indeterminate', false);
+              return;
+            }
+            $headCheck.prop('checked', marc > 0 && marc === total);
+            $headCheck.prop('indeterminate', marc > 0 && marc < total);
+          }
+
+          // Insere o checkbox no 1º <th> quando o DataTable inicializa
+          $table.on('init.dt', function () {
+            const $th0 = $table.find('thead th').eq(0).addClass('text-center col-select');
+            if (!$th0.find('.check-all').length) {
+              $th0.html('<input type="checkbox" class="form-check-input check-all" title="Selecionar todos">');
+            }
+          });
+
+          // Marcar/desmarcar todas as linhas (APENAS 1ª coluna)
+          $table.on('change', 'thead .check-all', function () {
+            const mark = this.checked;
+            $table
+              .find('tbody td:first-child input.dt-row-select[type=checkbox]')
+              .prop('checked', mark)
+              .trigger('change'); // mantém integração com seleção de linha (se existir)
+            updateHeaderState();
+          });
+
+          // A cada redraw:
+          //  - coloca a classe dt-row-select APENAS nos checkboxes da 1ª coluna
+          //  - recalcula o estado do cabeçalho
+          $table.on('draw.dt', function () {
+            $table
+              .find('tbody td:first-child input[type=checkbox]')
+              .addClass('dt-row-select'); // marcador para diferenciar do switch "Ativo"
+            updateHeaderState();
+          });
+
+          // Quando o usuário marca/desmarca uma linha individualmente => reflete no cabeçalho
+          $table.on('change', 'tbody td:first-child input.dt-row-select[type=checkbox]', updateHeaderState);
+
+          // ==========================================
+          // 3) Ações opcionais (ex.: delete/detail)
+          // ==========================================
+          DTUtil.actions.on('Taux2', 'delete', async ({ id, meta, dt, button }) => {
+            const row   = dt.row($(button).closest('tr')).data() || {};
+            // fallback para nome do token
+            const token = row?.[meta.tokenField] ?? row?.token ?? row?.deleteToken;
+            if (!token) return (window.AppNotifier ? AppNotifier.warn('Token ausente para exclusão.') : alert('Token ausente para exclusão.'));
+
+            const ok = window.AppModal?.confirm
+              ? await AppModal.confirm('Excluir este registro?')
+              : confirm('Excluir este registro?');
+
+            if (!ok) return;
+
+            $.ajax({
+              url: meta.routes.deletePost,
+              type: 'POST',
+              contentType: 'application/json; charset=UTF-8',
+              data: JSON.stringify({ token })
+            })
+            .done(() => {
+              window.AppNotifier && AppNotifier.success('Excluído com sucesso.');
+              dt.ajax.reload(null, false);
+            })
+            .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
+          });
+
+          DTUtil.actions.on('Taux2', 'detail', async ({ id/*, meta, dt, button */ }) => {
+            alert('detail ' + id);
+          });
+
+          // ==========================================
+          // 4) Busca / limpeza de busca (já usava)
+          // ==========================================
+          DTUtil.bindInputSearch('#searchGrid', '#gridTaux2');
+          DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridTaux2', { reload: true, resetPaging: true });
         });
     </script>
-    
-
 
 }
 
 <!--//-->
 <script>
+    // Filtro por Cdtptabela (mantido)
     document.addEventListener('DOMContentLoaded', () => {
       const gridName = '#gridTaux2';
-
-      // Garante que SEMPRE mandaremos o filtro na chamada do DataTables
       $(gridName).on('preXhr.dt', function (_e, _settings, data) {
         data.cdtptabela = document.getElementById('cdtptabelaFiltro')?.value || '';
       });
-
-      // Se o grid já foi criado pelo seu DTUtil, apenas recarrega pra aplicar o filtro;
-      // caso você crie o grid aqui, mantenha este reload após o create.
-      //const dt = $(gridName).DataTable();
-      //dt.ajax.reload(null, true); // força nova chamada já com o cdtptabela
+      // const dt = $(gridName).DataTable();
+      // dt.ajax.reload(null, true);
     });
 </script>
 
@@ -154,5 +218,3 @@
     var filtro = (string)(ViewBag.CdtptabelaFiltro ?? "");
 }
 <input type="hidden" id="cdtptabelaFiltro" value="@filtro" />
-
-

@@ -8,6 +8,8 @@ namespace RhSensoWeb.Areas.SYS.Services
 {
     public interface ITaux2Service
     {
+        Task<ApiResponse> UpdateAtivoAsync((string cdtptabela, string cdsituacao) id, bool ativo, string userId);
+
         Task<ApiResponse<IEnumerable<Taux2>>> GetDataAsync(string userId, string? cdtptabela = null);
         Task<ApiResponse> CreateAsync(Taux2 entity, ModelStateDictionary modelState);
         Task<ApiResponse> EditAsync((string cdtptabela, string cdsituacao) id, Taux2 entity, ModelStateDictionary modelState);
