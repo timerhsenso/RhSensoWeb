@@ -12,6 +12,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace RhSensoWeb.Areas.SEG.Services
 {
@@ -24,6 +26,15 @@ namespace RhSensoWeb.Areas.SEG.Services
 
         private const string PurposeEdit = "Edit";
         private const string PurposeDelete = "Delete";
+
+
+        // === Locks por registro e controle de intervalo mínimo ===
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _rowLocks = new();
+        private static readonly ConcurrentDictionary<string, DateTimeOffset> _lastChange = new();
+
+        private static SemaphoreSlim GetRowLock(string key)
+            => _rowLocks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
 
         public UsuarioService(
             ApplicationDbContext db,
@@ -83,26 +94,59 @@ namespace RhSensoWeb.Areas.SEG.Services
                 if (string.IsNullOrWhiteSpace(id))
                     return ApiResponse.Fail("ID do usuário é obrigatório.");
 
-                var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
-                if (_cache.TryGetValue(cooldownKey, out _))
-                    return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
+                // === Exclusão mútua por linha (evita corrida de requisições simultâneas) ===
+                var rowKey = id; // trave por ID do usuário
+                var gate = GetRowLock(rowKey);
+                if (!await gate.WaitAsync(0))
+                    return ApiResponse.Fail("Outra alteração para este usuário já está em andamento. Aguarde.");
 
-                _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
+                try
                 {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
-                });
+                    // === Intervalo mínimo (ex.: 2s) entre mudanças no MESMO registro ===
+                    var now = DateTimeOffset.UtcNow;
+                    if (_lastChange.TryGetValue(rowKey, out var last) && (now - last) < TimeSpan.FromSeconds(2))
+                        return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
 
-                var entidade = await _db.Tuse1.FirstOrDefaultAsync(x => x.Cdusuario == id);
-                if (entidade is null)
-                    return ApiResponse.Fail("Usuário não encontrado.");
+                    // Cooldown leve em memória (extra; pode manter)
+                    var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
+                    if (_cache.TryGetValue(cooldownKey, out _))
+                        return ApiResponse.Fail("Aguarde um instante antes de alterar novamente.");
 
-                if (entidade.Ativo == ativo)
-                    return ApiResponse.Ok("Status já estava atualizado.");
+                    _cache.Set(cooldownKey, 1, new MemoryCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(2)
+                    });
 
-                entidade.Ativo = ativo;
-                await _db.SaveChangesAsync();
+                    var entidade = await _db.Tuse1.FirstOrDefaultAsync(x => x.Cdusuario == id);
+                    if (entidade is null)
+                        return ApiResponse.Fail("Usuário não encontrado.");
 
-                return ApiResponse.Ok(ativo ? "Usuário ativado com sucesso!" : "Usuário desativado com sucesso!");
+                    // Idempotência — não grava se já estiver no estado pedido
+                    if (entidade.Ativo == ativo)
+                        return ApiResponse.Ok("Status já estava atualizado.");
+
+                    entidade.Ativo = ativo;
+                    await _db.SaveChangesAsync();
+
+                    // Marca o horário da última mudança para este registro
+                    _lastChange[rowKey] = now;
+
+                    // Log apenas quando realmente mudou
+                    _logger.LogInformation("Usuario.UpdateAtivo OK {@info}", new
+                    {
+                        Entidade = "tuse1",
+                        Id = id,
+                        Campo = "flativo",
+                        Valor = ativo ? "S" : "N",
+                        Usuario = userId
+                    });
+
+                    return ApiResponse.Ok(ativo ? "Usuário ativado com sucesso!" : "Usuário desativado com sucesso!");
+                }
+                finally
+                {
+                    gate.Release();
+                }
             }
             catch (DbUpdateConcurrencyException ex)
             {
@@ -120,6 +164,9 @@ namespace RhSensoWeb.Areas.SEG.Services
                 return ApiResponse.Fail("Erro interno do servidor.");
             }
         }
+
+
+
 
         // ===== CREATE =====
         public async Task<ApiResponse> CreateAsync(Tuse1 usuario, ModelStateDictionary modelState)

@@ -1,14 +1,16 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
-using RhSensoWeb.Data;
-using RhSensoWeb.Services.Security;
-using Serilog;
+using Microsoft.AspNetCore.Http;                 // StatusCodes, SameSiteMode, CookieSecurePolicy
+using Microsoft.AspNetCore.Mvc;                  // AutoValidateAntiforgeryTokenAttribute
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using RhSensoWeb.Areas.SEG.Services;            // Serviços da área SEG
+using RhSensoWeb.Areas.SYS.Services;            // Serviços da área SYS
+using RhSensoWeb.Data;
+using RhSensoWeb.Middleware;                    // Middleware global de exceções
+using RhSensoWeb.Services.Security;             // RowTokenService / etc.
+using Serilog;
+using System.Text.Json;                          // JSON no RateLimiter
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Mvc;       // AutoValidateAntiforgeryTokenAttribute
-using RhSensoWeb.Middleware;          // Middleware global de exceções
-using RhSensoWeb.Areas.SEG.Services;  // Services da área SEG
-using RhSensoWeb.Areas.SYS.Services;  // << NEW: Service da área SYS/Taux1
 
 namespace RhSensoWeb
 {
@@ -16,7 +18,9 @@ namespace RhSensoWeb
     {
         public static void Main(string[] args)
         {
-            // --- Serilog com CloseAndFlush no finally (boa prática) ---
+            // =========================================================
+            //  SERILOG (logger do host) — CloseAndFlush no finally
+            // =========================================================
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .Enrich.FromLogContext()
@@ -27,69 +31,75 @@ namespace RhSensoWeb
             try
             {
                 var builder = WebApplication.CreateBuilder(args);
-
-                // Config Serilog via Host
                 builder.Host.UseSerilog();
 
-                // =======================
-                // MVC + JSON (uma única vez)
-                // =======================
+                // =========================================================
+                //  MVC + JSON
+                //  - Anti-CSRF global em métodos mutáveis
+                //  - Mantém PascalCase (compatível com seu front)
+                // =========================================================
                 builder.Services
-                    .AddControllersWithViews(options =>
+                    .AddControllersWithViews(opt =>
                     {
-                        // Aplica Anti-CSRF globalmente a POST/PUT/PATCH/DELETE
-                        options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
+                        opt.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
                     })
                     .AddJsonOptions(o =>
                     {
-                        // Mantém padrão PascalCase (compatível com front atual)
                         o.JsonSerializerOptions.PropertyNamingPolicy = null;
                         o.JsonSerializerOptions.DictionaryKeyPolicy = null;
                     });
 
-                // =======================
-                // INFRA
-                // =======================
+                // =========================================================
+                //  INFRA & HELPERS
+                // =========================================================
                 builder.Services.AddHttpContextAccessor();
-                builder.Services.AddScoped<SqlLoggingInterceptor>();
+                builder.Services.AddScoped<SqlLoggingInterceptor>();     // seu interceptor de SQL
+                builder.Services.AddMemoryCache();
 
-                // =======================
-                // DB CONTEXT (EF Core)
-                // =======================
+                // =========================================================
+                //  EF CORE / SQL SERVER
+                //  - Retry on failure: resiliente a quedas momentâneas
+                //  - Logs detalhados em DEV
+                //  - Interceptor com contexto de request
+                // =========================================================
                 builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
                 {
-                    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                    var cs = builder.Configuration.GetConnectionString("DefaultConnection");
+                    options.UseSqlServer(cs, sql => sql.EnableRetryOnFailure(
+                        maxRetryCount: 5,
+                        maxRetryDelay: TimeSpan.FromSeconds(10),
+                        errorNumbersToAdd: null));
 
                     if (builder.Environment.IsDevelopment())
                         options.EnableSensitiveDataLogging();
 
                     options.EnableDetailedErrors();
-
-                    // Interceptor de SQL com contexto da requisição
                     options.AddInterceptors(sp.GetRequiredService<SqlLoggingInterceptor>());
-
-                    // Log do EF (ajuste nível em produção)
                     options.LogTo(Console.WriteLine, LogLevel.Information);
                 });
 
-                // =======================
-                // AUTENTICAÇÃO (Cookie)
-                // =======================
+                // =========================================================
+                //  AUTENTICAÇÃO (Cookies) + opções de cookie mais seguras
+                // =========================================================
                 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                     .AddCookie(options =>
                     {
-                        // Alinhar rotas com a área SEG
                         options.LoginPath = "/SEG/Account/Login";
                         options.LogoutPath = "/SEG/Account/Logout";
                         options.AccessDeniedPath = "/Error/Error403";
+
+                        options.Cookie.Name = ".RhSensoWeb.Auth";
+                        options.Cookie.HttpOnly = true;
+                        options.Cookie.SameSite = SameSiteMode.Lax;    // evita CSRF sem quebrar POSTs
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
                         options.ExpireTimeSpan = TimeSpan.FromHours(2);
                         options.SlidingExpiration = true;
                     });
 
-                // =======================
-                // SESSÃO
-                // =======================
+                // =========================================================
+                //  SESSÃO (usada nos seus filtros e helpers)
+                // =========================================================
                 builder.Services.AddDistributedMemoryCache();
                 builder.Services.AddSession(options =>
                 {
@@ -97,119 +107,137 @@ namespace RhSensoWeb
                     options.Cookie.Name = ".RhSensoWeb.Session";
                     options.Cookie.HttpOnly = true;
                     options.Cookie.IsEssential = true;
+                    options.Cookie.SameSite = SameSiteMode.Lax;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
                 });
 
-                // =======================
-                // ANTI-FORGERY (CSRF)
-                // =======================
+                // =========================================================
+                //  ANTI-FORGERY — cabeçalho usado pelo seu front (RequestVerificationToken)
+                // =========================================================
                 builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
 
-                // =======================
-                // DATA PROTECTION
-                // =======================
+                // =========================================================
+                //  DATA PROTECTION — (persistir chaves em produção/multi-instância)
+                // =========================================================
                 builder.Services.AddDataProtection();
-                // Nota: em ambiente multi-instância, persista as chaves (FileSystem/Blob/Redis).
 
-                // =======================
-                // SERVIÇOS DE SEGURANÇA / UTIL
-                // =======================
+                // =========================================================
+                //  DI: Serviços de domínio
+                // =========================================================
                 builder.Services.AddSingleton<IRowTokenService, RowTokenService>();
-                builder.Services.AddMemoryCache();
 
-                // =======================
-                // SEG – 
-                // =======================
+                // SEG
+                builder.Services.AddScoped<IUsuarioService, UsuarioService>();
                 builder.Services.AddScoped<ITsistemaService, TsistemaService>();
-                builder.Services.AddScoped<IUsuarioService, UsuarioService>();     // Usa UpdateAtivoPolicy no controller de usuário. :contentReference[oaicite:2]{index=2}
                 builder.Services.AddScoped<IBtfuncaoService, BtfuncaoService>();
 
-                // =======================
-                // SYS – 
-                // =======================
-                builder.Services.AddScoped<ITaux1Service, Taux1Service>();         // Controller revisado usa RequirePermission/tokens como Usuário.
+                // SYS
+                builder.Services.AddScoped<ITaux1Service, Taux1Service>();
                 builder.Services.AddScoped<ITaux2Service, Taux2Service>();
 
-                // (se o Taux2 usa token por linha, igual Taux1)
-                //  builder.Services.AddScoped<IRowTokenService, RowTokenService>();
+                // MIDDLEWARES via DI
+                builder.Services.AddScoped<_ExceptionHandlingMiddleware>();
 
-                // =======================
-                // MIDDLEWARES (DI)
-                // =======================
-                builder.Services.AddScoped<_ExceptionHandlingMiddleware>();         // registra IMiddleware
-
-                // =======================
-                // RATE LIMITER
-                // =======================
+                // =========================================================
+                //  RATE LIMITER — política para endpoints “sensíveis” (ex.: toggle)
+                //  - Responde JSON amigável + Retry-After para o front iniciar cooldown
+                // =========================================================
                 builder.Services.AddRateLimiter(options =>
                 {
-                    options.RejectionStatusCode = 429;
+                    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+                    options.OnRejected = async (ctx, ct) =>
+                    {
+                        ctx.HttpContext.Response.ContentType = "application/json";
+
+                        // Sugestão de espera vinda do limiter
+                        int retryAfter = 2;
+                        if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ra))
+                            retryAfter = Math.Max(1, (int)Math.Ceiling(ra.TotalSeconds));
+
+                        // Também adiciona header padrão (bom para proxies/clients)
+                        ctx.HttpContext.Response.Headers["Retry-After"] = retryAfter.ToString();
+
+                        var payload = new
+                        {
+                            success = false,
+                            message = $"Muitas tentativas. Tente novamente em {retryAfter}s.",
+                            retryAfter
+                        };
+
+                        await ctx.HttpContext.Response.WriteAsync(JsonSerializer.Serialize(payload), ct);
+                    };
 
                     options.AddPolicy("UpdateAtivoPolicy", httpContext =>
                     {
+                        // chave por usuário autenticado; fallback IP quando anônimo
                         var key = httpContext.User?.Identity?.Name
                                   ?? httpContext.Connection.RemoteIpAddress?.ToString()
                                   ?? "anon";
 
-                        return RateLimitPartition.GetTokenBucketLimiter(
-                            key,
-                            _ => new TokenBucketRateLimiterOptions
-                            {
-                                TokenLimit = 8,
-                                TokensPerPeriod = 4,
-                                ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-                                AutoReplenishment = true,
-                                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                                QueueLimit = 0
-                            });
+                        return RateLimitPartition.GetTokenBucketLimiter(key, _ => new TokenBucketRateLimiterOptions
+                        {
+                            TokenLimit = 1,                     // 1 ação por janela
+                            TokensPerPeriod = 1,
+                            ReplenishmentPeriod = TimeSpan.FromSeconds(2),
+                            QueueLimit = 0,
+                            AutoReplenishment = true
+                        });
                     });
                 });
 
+                // =========================================================
+                //  BUILD DO APP
+                // =========================================================
                 var app = builder.Build();
 
-                // =======================
-                // EXCEÇÕES (GLOBAL) — deve vir PRIMEIRO no pipeline
-                // =======================
-                app.UseMiddleware<_ExceptionHandlingMiddleware>();                  // JSON 500 padronizado
-                app.UseSerilogRequestLogging();                                    // log de cada request
+                // =========================================================
+                //  MIDDLEWARES GLOBAIS — ficam no topo do pipeline
+                // =========================================================
+                app.UseMiddleware<_ExceptionHandlingMiddleware>();   // tratamento unificado de exceções → JSON 500
+                app.UseSerilogRequestLogging();                      // loga cada request (Status, Path, Tempo, etc.)
 
-                // Header de ambiente em todas as respostas
+                // Header de ambiente em toda resposta (útil em debug/infra)
                 app.Use(async (ctx, next) =>
                 {
                     ctx.Response.Headers["X-Env"] = app.Environment.EnvironmentName;
                     await next();
                 });
 
-                // Disponibiliza HttpContext a helpers globais
+                // Exponhe HttpContext a helpers estáticos (seu helper usa isso)
                 var accessor = app.Services.GetRequiredService<IHttpContextAccessor>();
                 RhSensoWeb.Helpers.ConstanteHelper.Configure(accessor);
 
-                // =======================
-                // ERROS HTTP (não-exceções) + HSTS
-                // =======================
+                // =========================================================
+                //  STATUS PAGES + HSTS
+                //  - StatusCodePagesWithReExecute trata 4xx/5xx NÃO-exceções (ex.: 404 de estático)
+                //  - HSTS só em produção e ANTES do redirect
+                // =========================================================
                 app.UseStatusCodePagesWithReExecute("/Error/{0}");
 
                 if (!app.Environment.IsDevelopment())
                 {
-                    app.UseHsts();                                               // << move para antes do redirect (recomendado)
+                    app.UseHsts();
                 }
 
-                // =======================
-                // PIPELINE
-                // =======================
+                // =========================================================
+                //  PIPELINE PRINCIPAL (ordem importa)
+                //  - StaticFiles antes de Routing evita passar por filtros desnecessários
+                //  - Session → Auth → RateLimiter → Authorization
+                // =========================================================
                 app.UseHttpsRedirection();
                 app.UseStaticFiles();
-
                 app.UseRouting();
 
-                // Ordem: Session -> Auth -> RateLimiter -> Authorization
-                app.UseSession();          // lê sessão em filtros
+                app.UseSession();
                 app.UseAuthentication();
-                app.UseRateLimiter();      // usa Identity.Name quando houver (vide Usuario/Tsistema) :contentReference[oaicite:3]{index=3} :contentReference[oaicite:4]{index=4}
+                app.UseRateLimiter();        // políticas por endpoint (ex.: [EnableRateLimiting("UpdateAtivoPolicy")])
                 app.UseAuthorization();
 
-                // =======================
-                // ROTAS
-                // =======================
+                // =========================================================
+                //  ROTAS
+                //  - Áreas primeiro, depois rota padrão
+                // =========================================================
                 app.MapControllerRoute(
                     name: "areas",
                     pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
@@ -227,7 +255,7 @@ namespace RhSensoWeb
             }
             finally
             {
-                Log.CloseAndFlush(); // garante flush de logs
+                Log.CloseAndFlush();
             }
         }
     }

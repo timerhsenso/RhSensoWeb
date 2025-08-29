@@ -113,7 +113,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             if (string.IsNullOrWhiteSpace(id))
                 return Json(new { success = false, message = "ID do usuário é obrigatório." });
 
-            // Anti-double click
+            // Anti-double click local (se quiser manter aqui também)
             var userId = User?.Identity?.Name ?? "anon";
             var cooldownKey = $"SEG:Usuario:UpdateAtivo:{userId}:{id}";
             if (_cache.TryGetValue(cooldownKey, out _))
@@ -125,8 +125,20 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             });
 
             var resp = await _service.UpdateAtivoAsync(id, ativo, userId);
-            return Json(resp);
+
+            // Detecta NO-OP pela mensagem padronizada do service
+            var noop = string.Equals(resp?.Message, "Status já estava atualizado.", StringComparison.OrdinalIgnoreCase)
+                       || string.Equals(resp?.Message, "Sem alteração (já estava nesse estado).", StringComparison.OrdinalIgnoreCase);
+
+            return Json(new
+            {
+                success = resp?.Success ?? false,
+                message = resp?.Message ?? "Erro ao processar a solicitação.",
+                noop
+            });
         }
+
+
 
         // GET: /SEG/Usuario/SafeEdit?token=...
         [HttpGet]
