@@ -21,10 +21,19 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             _logger = logger;
         }
 
-        // =========================================================
-        // Abertura da tela
-        // =========================================================
+        // ===== NOVO: Modal para ser carregado dentro do FormModal =====
+        [HttpGet]
+        public IActionResult Modal(string cdUsuario, string? dcUsuario)
+        {
+            if (string.IsNullOrWhiteSpace(cdUsuario))
+                return BadRequest("cdUsuario é obrigatório.");
 
+            ViewBag.CdUsuario = cdUsuario.Trim();
+            ViewBag.DcUsuario = dcUsuario ?? string.Empty;
+            return PartialView("Modal"); // Areas/SEG/Views/UsuarioGrupo/Modal.cshtml
+        }
+
+        // ===== Abertura da tela "cheia" (já existia) =====
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Abrir(string cdUsuarioID, string dcUsuario)
@@ -46,9 +55,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             return View();
         }
 
-        // =========================================================
-        // DataTables - grid
-        // =========================================================
+        // ===== DataTables / listagem JSON (já existia) =====
         [HttpGet]
         public async Task<IActionResult> GetData(string cdUsuarioID)
         {
@@ -85,10 +92,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             }
         }
 
-        // =========================================================
-        // Combos dinâmicos (Sistema / Grupos por Sistema)
-        // =========================================================
-
+        // ===== Combos dinâmicos (já existia) =====
         [HttpGet]
         public async Task<IActionResult> GetSistemas()
         {
@@ -96,13 +100,9 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             {
                 var sistemas = await _db.Tsistema
                     .AsNoTracking()
-                    .Where(s => s.Ativo) // só traz ativos
+                    .Where(s => s.Ativo)
                     .OrderBy(s => s.Dcsistema)
-                    .Select(s => new
-                    {
-                        id = s.Cdsistema,
-                        text = s.Dcsistema
-                    })
+                    .Select(s => new { id = s.Cdsistema, text = s.Dcsistema })
                     .ToListAsync();
 
                 return Json(sistemas);
@@ -128,11 +128,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                     .AsNoTracking()
                     .Where(g => g.CdSistema != null && g.CdSistema.Trim().ToUpper() == sis)
                     .OrderBy(g => g.DcGrUser)
-                    .Select(g => new
-                    {
-                        id = g.CdGrUser,
-                        text = g.DcGrUser
-                    })
+                    .Select(g => new { id = g.CdGrUser, text = g.DcGrUser })
                     .ToListAsync();
 
                 return Json(grupos);
@@ -144,10 +140,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
             }
         }
 
-        // =========================================================
-        // Create / Update / Delete
-        // =========================================================
-
+        // ===== Create / Update / Delete (já existiam) =====
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(string cdUsuarioID, string cdSistema, string cdGrUser, DateTime? dtIniVal, DateTime? dtFimVal)
@@ -205,12 +198,7 @@ namespace RhSensoWeb.Areas.SEG.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Update(
-            string cdUsuarioID,
-            string origCdSistema,
-            string origCdGrUser,
-            DateTime? dtIniVal,
-            DateTime? dtFimVal)
+        public async Task<IActionResult> Update(string cdUsuarioID, string origCdSistema, string origCdGrUser, DateTime? dtIniVal, DateTime? dtFimVal)
         {
             try
             {
@@ -234,7 +222,6 @@ namespace RhSensoWeb.Areas.SEG.Controllers
                 if (dtIniVal.HasValue && dtFimVal.HasValue && dtFimVal.Value < dtIniVal.Value)
                     return BadRequest("Data fim não pode ser menor que a data início.");
 
-                // Edição só de datas
                 registro.DtIniVal = dtIniVal;
                 registro.DtFimVal = dtFimVal;
 

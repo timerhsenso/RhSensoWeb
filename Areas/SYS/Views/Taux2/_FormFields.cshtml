@@ -1,37 +1,55 @@
 @model RhSensoWeb.Models.Taux2
 @{
-    var tipos = (IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>) (ViewData["TiposTabela"] ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>());
+    var isEdit = (ViewBag.IsEdit as bool?) ?? false;
 }
+
 <div class="row g-3">
     <div class="col-md-3">
-        <label asp-for="Cdtptabela" class="form-label"></label>
-        <select asp-for="Cdtptabela" asp-items="tipos" class="form-select">
-            <option value="">-- selecione --</option>
-        </select>
+        <label asp-for="Cdtptabela" class="form-label">Código Tipo</label>
+        @if (isEdit)
+        {
+            <input asp-for="Cdtptabela" class="form-control" readonly />
+            <input type="hidden" asp-for="Cdtptabela" />
+        }
+        else
+        {
+            <select asp-for="Cdtptabela" class="form-select">
+                <option value="">-- Selecione --</option>
+                <!-- Opções do ViewBag.TiposTabela -->
+            </select>
+        }
         <span asp-validation-for="Cdtptabela" class="text-danger"></span>
     </div>
 
     <div class="col-md-3">
-        <label asp-for="Cdsituacao" class="form-label"></label>
-        <input asp-for="Cdsituacao" class="form-control" />
+        <label asp-for="Cdsituacao" class="form-label">Código Situação</label>
+        @if (isEdit)
+        {
+            <input asp-for="Cdsituacao" class="form-control" readonly />
+            <input type="hidden" asp-for="Cdsituacao" />
+        }
+        else
+        {
+            <input asp-for="Cdsituacao" class="form-control" />
+        }
         <span asp-validation-for="Cdsituacao" class="text-danger"></span>
     </div>
 
     <div class="col-md-6">
-        <label asp-for="Dcsituacao" class="form-label"></label>
+        <label asp-for="Dcsituacao" class="form-label">Descrição</label>
         <input asp-for="Dcsituacao" class="form-control" />
         <span asp-validation-for="Dcsituacao" class="text-danger"></span>
     </div>
 
     <div class="col-md-3">
-        <label asp-for="Noordem" class="form-label"></label>
+        <label asp-for="Noordem" class="form-label">Ordem</label>
         <input asp-for="Noordem" class="form-control" />
         <span asp-validation-for="Noordem" class="text-danger"></span>
     </div>
 
     <div class="col-md-3 form-check mt-4">
         <input asp-for="Ativo" class="form-check-input" />
-        <label asp-for="Ativo" class="form-check-label"></label>
+        <label asp-for="Ativo" class="form-check-label">Ativo</label>
         <span asp-validation-for="Ativo" class="text-danger"></span>
     </div>
 </div>

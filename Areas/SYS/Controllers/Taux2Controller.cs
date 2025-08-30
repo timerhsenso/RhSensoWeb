@@ -39,7 +39,6 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         private sealed record RowKeys(string Cdtptabela, string Cdsituacao);
 
         // ====== VIEW PRINCIPAL ======
-        // ===== VIEW PRINCIPAL =====
         [HttpGet]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "C")]
         public IActionResult Index(string cdtptabela = null, string dctabela = null)
@@ -57,7 +56,6 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             return View();
         }
 
-
         // Recebe POST do Taux1 e salva filtro para o próximo request
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -67,7 +65,6 @@ namespace RhSensoWeb.Areas.SYS.Controllers
             TempData["Taux2.Filter.dctabela"] = dctabela?.Trim();
             return RedirectToAction(nameof(Index));
         }
-
 
         // ====== LISTAGEM PARA GRID ======
         [HttpGet]
@@ -102,6 +99,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                             r.Dcsituacao,
                             r.Noordem,
                             r.Ativo,
+                            RowId = $"{k1}|{k2}", // ← ADICIONADO
                             deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
                             editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
                         };
@@ -126,6 +124,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                             Dcsituacao = GetString(o, "Dcsituacao"),
                             Noordem = GetString(o, "Noordem"),
                             Ativo = GetString(o, "Ativo"),
+                            RowId = $"{k1}|{k2}", // ← ADICIONADO
                             deleteToken = _rowToken.Protect(new RowKeys(k1, k2), "Delete", userId, TimeSpan.FromMinutes(10)),
                             editToken = _rowToken.Protect(new RowKeys(k1, k2), "Edit", userId, TimeSpan.FromMinutes(10))
                         };
@@ -139,7 +138,6 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 return Json(new { data = result.Data });
             }
         }
-
 
         // ====== SAFE EDIT via token ======
         [HttpGet]
@@ -212,25 +210,15 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         public async Task<IActionResult> Create()
         {
             ViewBag.TiposTabela = await _service.GetTiposTabelaAsync();
+            ViewBag.IsEdit = false;
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "I")]
-        public async Task<IActionResult> Create([Bind("Cdtptabela,Cdsituacao,Dcsituacao")] Taux2 entity)
-        {
-            var resp = await _service.CreateAsync(entity, ModelState);
-            if (resp.Success)
-            {
-                TempData["SuccessMessage"] = resp.Message;
-                return RedirectToAction(nameof(Index));
-            }
-
-            ViewBag.TiposTabela = await _service.GetTiposTabelaAsync();
-            TempData["ErrorMessage"] = resp.Message;
-            return View(entity);
-        }
+        public async Task<IActionResult> Create([Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Ativo")] Taux2 entity)
+            => Json(await _service.CreateAsync(entity, ModelState));
 
         // ====== EDICAO ======
         [HttpGet]
@@ -243,28 +231,23 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 TempData["ErrorMessage"] = resp.Message;
                 return RedirectToAction(nameof(Index));
             }
+
+            ViewBag.Title = "Editar Situação Auxiliar";
+            ViewBag.IsEdit = true;
             return View(entidade);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequirePermission("RHU", "RHU_FM_TAUX1", "A")]
-        public async Task<IActionResult> Edit(string token, [Bind("Cdtptabela,Cdsituacao,Dcsituacao")] Taux2 entity)
+        public async Task<IActionResult> Edit(string token, [Bind("Cdtptabela,Cdsituacao,Dcsituacao,Noordem,Ativo")] Taux2 entity)
         {
             var (resp, entidade) = await _service.GetForSafeEditAsync(token, User.Identity?.Name!);
             if (!resp.Success || entidade is null)
-            {
-                TempData["ErrorMessage"] = resp.Message;
-                return RedirectToAction(nameof(Index));
-            }
+                return Json(ApiResponse.Fail(resp.Message ?? "Token inválido."));
+
             var respUpdate = await _service.EditAsync((entidade.Cdtptabela!, entidade.Cdsituacao!), entity, ModelState);
-            if (respUpdate.Success)
-            {
-                TempData["SuccessMessage"] = respUpdate.Message;
-                return RedirectToAction(nameof(Index));
-            }
-            TempData["ErrorMessage"] = respUpdate.Message;
-            return View(entity);
+            return Json(respUpdate);
         }
 
         // ====== EXCLUSAO ======
@@ -312,7 +295,7 @@ namespace RhSensoWeb.Areas.SYS.Controllers
         {
             var userId = User?.Identity?.Name ?? "anon";
 
-            // (Opcional) pequeno cooldown local — pode remover se quiser deixar só no Service
+            // (Opcional) pequeno cooldown local – pode remover se quiser deixar só no Service
             var keyLocal = $"SYS:Taux2:UpdateAtivo:{userId}:{cdtptabela}|{cdsituacao}";
             if (_cache.TryGetValue(keyLocal, out _))
                 return Json(new { success = false, message = "Aguarde um instante antes de alterar novamente." });
@@ -331,7 +314,6 @@ namespace RhSensoWeb.Areas.SYS.Controllers
                 noop
             });
         }
-
 
         // ====== HEALTH CHECK ======
         [HttpGet]

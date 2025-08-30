@@ -1,826 +1,124 @@
 @{
-    ViewBag.Title = "Grupos do Usuário";
-    Layout = "~/Views/Shared/_VerticalLayout.cshtml";
-
-    var title = ViewBag.Title;
-    var subtitle = ViewBag.SubTitle;
-    var cdUsuario = (string)(ViewBag.CdUsuarioID ?? "");
-    var dcUsuario = (string)(ViewBag.DcUsuario ?? "");
+    ViewData["Title"] = "Usuários";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-@section styles {
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-
-    <!-- DataTables CSS (versões consistentes: DT 2.1.5 + Buttons 3.2.0 + Responsive 3.0.3 + ColReorder 2.0.3) -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.css" />
-
-    <style>
-        /* Container principal */
-        .container-fluid {
-            padding-right: 15px;
-            padding-left: 15px;
-            margin-right: auto;
-            margin-left: auto;
-            overflow-x: hidden;
-        }
-
-        /* Tabela compacta */
-        #tblGrupos {
-            width: 100% !important;
-            margin: 0;
-            table-layout: fixed; /* evita "vazar" quando somas de largura > container */
-        }
-
-            #tblGrupos thead th {
-                font-family: "open sans","Helvetica Neue",Helvetica,Arial,sans-serif;
-                font-size: 12px;
-                font-weight: 600;
-                color: #676a6c;
-                vertical-align: middle;
-                padding: 4px 8px !important;
-                line-height: 1.1 !important;
-                height: 32px !important;
-            }
-
-            #tblGrupos th, #tblGrupos td {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                vertical-align: middle;
-            }
-
-            #tblGrupos .badge {
-                font-size: 11px;
-                padding: 4px 8px;
-            }
-
-            #tblGrupos .btn-group-sm .btn {
-                padding: 4px 8px;
-                font-size: 12px;
-            }
-
-            /* Coluna checkbox (fixa e centralizada) - largura controlada no JS; aqui só centraliza */
-            #tblGrupos th.dt-check, #tblGrupos td.dt-check {
-                text-align: center;
-            }
-
-            /* Coluna Ações (sem quebra, centralizada) - largura controlada no JS */
-            #tblGrupos th.dt-actions, #tblGrupos td.dt-actions {
-                white-space: nowrap;
-                text-align: center;
-            }
-
-        /* Oculta controles nativos (length e search) e os botões do DataTables */
-        #tblGrupos_wrapper .dataTables_length,
-        #tblGrupos_wrapper .dataTables_filter,
-        #tblGrupos_wrapper .dt-buttons {
-            display: none !important;
-        }
-
-        /* Toolbar - CORRIGIDO: garantir que elementos fiquem na mesma linha */
-        .toolbar-container {
-            display: flex;
-            flex-wrap: nowrap; /* MUDANÇA: nowrap para manter na mesma linha */
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            width: 100%;
-            min-height: 40px; /* altura mínima para consistência */
-        }
-
-        .search-fixed {
-            width: clamp(200px, 30vw, 400px); /* MUDANÇA: reduzido para dar mais espaço aos botões */
-            position: relative;
-            flex-shrink: 1; /* permite encolher se necessário */
-            margin-right: 10px;
-        }
-
-            .search-fixed .form-control {
-                padding-right: 36px;
-            }
-
-        .search-clear-btn {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: #6c757d;
-            cursor: pointer;
-            width: 20px;
-            height: 20px;
-            display: none;
-            z-index: 10;
-        }
-
-            .search-clear-btn.show {
-                display: block;
-            }
-
-        .toolbar-right {
-            display: flex;
-            align-items: center;
-            gap: 8px; /* MUDANÇA: reduzido gap para economizar espaço */
-            flex-wrap: nowrap;
-            flex-shrink: 0; /* não permite encolher os botões */
-        }
-
-        /* Responsividade - MUDANÇA: só quebra em telas muito pequenas */
-        @@media (max-width: 768px) {
-            .toolbar-container {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 8px;
-            }
-
-            .search-fixed {
-                width: 100%;
-                margin-right: 0;
-                margin-bottom: 8px;
-            }
-
-            .toolbar-right {
-                justify-content: flex-start;
-                flex-wrap: wrap;
-            }
-        }
-
-        /* Ajustes para DataTable */
-        .dataTables_wrapper {
-            position: relative;
-            clear: both;
-            width: 100%;
-        }
-
-        .dataTables_scroll {
-            clear: both;
-        }
-
-        /* Modal */
-        .modal-content {
-            border: none;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .modal-header {
-            border-bottom: 1px solid #e9ecef;
-            padding: 15px 20px;
-        }
-
-        .modal-body {
-            padding: 20px;
-        }
-
-        .modal-footer {
-            border-top: 1px solid #e9ecef;
-            padding: 15px 20px;
-        }
-
-        /* NOVO: Estilo para botão de envio de selecionados */
-        .btn-send-selected {
-            background-color: #28a745;
-            border-color: #28a745;
-            color: white;
-        }
-
-            .btn-send-selected:hover {
-                background-color: #218838;
-                border-color: #1e7e34;
-                color: white;
-            }
-
-            .btn-send-selected:disabled {
-                background-color: #6c757d;
-                border-color: #6c757d;
-                color: white;
-                opacity: 0.65;
-            }
-    </style>
-}
-
-<!-- Container Toast de Alerta -->
-@await Html.PartialAsync("~/Views/Shared/Partials/_Toastcontainer.cshtml")
-
-<!-- Form oculto com hiddens (ids adicionados) -->
-<form id="frmHidden" method="post" action="@Url.Action("Abrir", "GrupoFuncao", new { area = "SEG" })" class="d-none">
-    @Html.AntiForgeryToken()
-    <input type="hidden" id="hidSistemaSel" name="hidSistemaSel" />
-    <input type="hidden" id="hidFuncaoSel" name="hidFuncaoSel" />
-    <!-- NOVO: campos para armazenar múltiplas seleções -->
-    <input type="hidden" id="hidSelecionados" name="hidSelecionados" />
-</form>
-
-<div class="container-fluid">
-    <div class="page-title-head d-flex align-items-center">
-        <div class="flex-grow-1">
-            <h4 class="fs-sm text-uppercase fw-bold m-0"><i data-lucide="refresh-cw" class="me-2"></i>@title : <i>@dcUsuario</i> </h4>
-        </div>
-        <div class="text-end">
-            <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"></li>
-                @if (!string.IsNullOrEmpty(subtitle))
-                {
-                    <li class="breadcrumb-item active">
-                        <span id="meuRelogio"></span>
-                    </li>
-                }
-            </ol>
+<div class="card shadow-sm">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <h5 class="mb-0">Usuários</h5>
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary" href="@Url.Action("Create", "Usuario", new { area = "SEG" })">
+                <i class="fa-solid fa-plus me-1"></i>Novo
+            </a>
         </div>
     </div>
 
-    <!-- Topbar Start -->
-    <div class="row mb-2">
-        <div class="col-lg-12">
-            <form class="bg-light-subtle rounded border p-2">
-                <div class="toolbar-container">
-                    <div class="d-lg-none d-flex gap-2">
-                        <button class="btn btn-default btn-icon" type="button" data-bs-toggle="offcanvas" data-bs-target="#productFillterOffcanvas" aria-controls="productFillterOffcanvas">
-                            <i class="ti ti-menu-2 fs-lg"></i>
-                        </button>
-                    </div>
-
-                    <div class="input-group search-fixed">
-                        <span class="input-group-text"><i class="fa fa-search"></i></span>
-                        <input id="tableSearch" type="text" class="form-control" placeholder="Pesquisar na tabela..." />
-                        <button type="button" class="search-clear-btn" id="clearSearch" title="Limpar">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div>
-
-                    <div class="toolbar-right">
-                        <!-- Botão Voltar -->
-                        <button id="btnVoltar" class="btn btn-outline-secondary btn-sm" type="button" title="Voltar">
-                            <i class="fa fa-arrow-left me-1"></i> Voltar
-                        </button>
-
-                        <!-- Botão Novo -->
-                        <button id="btnNovo" class="btn btn-info btn-sm" type="button" title="Novo">
-                            <i data-lucide="plus" class="fs-sm me-1"></i> Novo
-                        </button>
-
-                        <!-- NOVO: Botão para enviar selecionados -->
-                        <button id="btnEnviarSelecionados" class="btn btn-send-selected btn-sm" type="button" title="Enviar Selecionados" disabled>
-                            <i class="fa fa-paper-plane me-1"></i> Enviar
-                        </button>
-
-                        <!-- Dropdown Exportar -->
-                        <div class="dropdown">
-                            <a href="#" class="btn btn-soft-primary btn-icon btn-sm" role="button"
-                               data-bs-toggle="dropdown" aria-expanded="false" title="Exportar">
-                                <i data-lucide="file-down" class="fs-lg"></i>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" id="exportExcel"><i class="fa fa-file-excel text-success me-2"></i>Excel</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportCsv"><i class="fa fa-file-csv text-info me-2"></i>CSV</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportPdf"><i class="fa fa-file-pdf text-danger me-2"></i>PDF</a></li>
-                                <li><a class="dropdown-item" href="#" id="exportPrint"><i class="fa fa-print text-secondary me-2"></i>Imprimir</a></li>
-                            </ul>
-                        </div>
-
-                        <!-- Dropdown Mais -->
-                        <div class="dropdown">
-                            <a href="#" class="btn btn-soft-primary btn-icon btn-sm" role="button"
-                               data-bs-toggle="dropdown" aria-expanded="false" title="Mais">
-                                <i data-lucide="ellipsis-vertical" class="fs-lg"></i>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item text-danger" href="#" id="btnExcluirSelecionados">
-                                        <i class="fa fa-trash me-2"></i>Excluir selecionados
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </form>
+    <div class="card-body">
+        <div class="mb-3">
+            <input id="usr-search" class="form-control" type="search" placeholder="Pesquisar..." />
         </div>
-    </div>
-    <!-- Topbar End -->
-    <!-- AntiForgery p/ POSTs -->
-    <form id="__anti" method="post">@Html.AntiForgeryToken()</form>
-    <input type="hidden" id="hidCdUsuario" value="@cdUsuario" />
-    <input type="hidden" id="hidDcUsuario" value="@dcUsuario" />
 
-    <div class="table-responsive">
-        <table id="tblGrupos" class="table table-striped table-bordered w-100">
-            <thead>
-                <tr>
-                    <th class="dt-check">
-                        <input type="checkbox" class="form-check-input js-check-all" title="Selecionar todos" />
-                    </th>
-                    <th>Sistema</th>
-                    <th>Grupo</th>
-                    <th>Descrição do Grupo</th>
-                    <th>Início</th>
-                    <th>Fim</th>
-                    <th class="dt-actions">Ações</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal Novo -->
-<div class="modal fade" id="modalNovo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered">
-        <div class="modal-content">
-            <form id="frmNovo" method="post">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="mode" name="mode" value="create" />
-                <input type="hidden" id="OrigCdSistema" name="OrigCdSistema" />
-                <input type="hidden" id="OrigCdGrUser" name="OrigCdGrUser" />
-
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitulo">Incluir grupo ao usuário</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Usuário</label>
-                        <input type="text" class="form-control" value="@cdUsuario" readonly />
-                        <input type="hidden" name="CdUsuario" id="CdUsuario" value="@cdUsuario" />
-                    </div>
-
-                    <!-- ALTERADO: inputs -> selects -->
-                    <div class="mb-3">
-                        <label class="form-label">Sistema <span class="text-danger">*</span></label>
-                        <select name="CdSistema" id="CdSistema" class="form-select" required>
-                            <option value="">Selecione...</option>
-                        </select>
-                        <div class="invalid-feedback">Selecione um sistema.</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Grupo <span class="text-danger">*</span></label>
-                        <select name="CdGrUser" id="CdGrUser" class="form-select" required disabled>
-                            <option value="">Selecione um sistema primeiro...</option>
-                        </select>
-                        <div class="invalid-feedback">Selecione um grupo.</div>
-                    </div>
-                    <!-- FIM ALTERAÇÃO -->
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Início</label>
-                            <input name="DtIniVal" id="DtIniVal" type="date" class="form-control" />
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Fim</label>
-                            <input name="DtFimVal" id="DtFimVal" type="date" class="form-control" />
-                        </div>
-                    </div>
-                    <small class="text-muted d-block mt-2">Campos marcados com * são obrigatórios.</small>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
-                </div>
-            </form>
+        <div class="table-responsive">
+            <table id="grid-usuarios" class="table table-sm table-hover align-middle w-100">
+                <thead>
+                    <tr>
+                        <th style="width:120px">Código</th>
+                        <th>Nome</th>
+                        <th>E-mail</th>
+                        <th style="width:150px" class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
 </div>
 
-@section scripts {
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- DataTables JS (combinação DT + Buttons + Responsive + ColReorder) -->
-    <script src="https://cdn.datatables.net/v/bs5/dt-2.1.5/b-3.2.0/r-3.0.3/cr-2.0.3/datatables.min.js"></script>
-
-    <!-- Dependências para exportar (Excel/PDF) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
-
+@section Scripts {
     <script>
-        /* ======================
-           CONFIG DE ENDPOINTS
-        =======================*/
-        const UG_URL_GET_SISTEMAS = '/SEG/UsuarioGrupo/GetSistemas'; // ajuste se necessário
-        const UG_URL_GET_GRUPOS   = '/SEG/UsuarioGrupo/GetGruposBySistema'; // ?cdsistema=...
+        (function () {
+            // Endpoints (ajuste se o seu controller usar nomes diferentes)
+            const urlGetData = '@Url.Action("GetData", "Usuario", new { area = "SEG" })';
+            const urlEdit    = (id) => '@Url.Action("Edit", "Usuario", new { area = "SEG" })' + '/' + encodeURIComponent(id);
+            const urlDetails = (id) => '@Url.Action("Details", "Usuario", new { area = "SEG" })' + '/' + encodeURIComponent(id);
 
-        /* ======================
-           HELPERS COMUNS
-        =======================*/
-        function anti() {
-            return document.querySelector('#__anti input[name="__RequestVerificationToken"]')?.value || '';
-        }
+            // Fallback se DTUtil.actions não existir: abre a rota do modal diretamente
+            const gotoUserGroupsFallback = (id) => {
+                const url = '@Url.Action("Modal", "UsuarioGrupo", new { area = "SEG" })' + '?cdUsuario=' + encodeURIComponent(id);
+                // Se existir um #formModal na página, você pode carregar nele.
+                // Aqui só navego como fallback (pag. própria do modal).
+                window.location.href = url;
+            };
 
-        function fmtDate(d) {
-            if (!d) return '';
-            const dt = new Date(d);
-            return isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('pt-BR');
-        }
-
-        // NOVO: Utils para selects
-        function popularSelect($select, items, placeholder) {
-            let opts = `<option value="">${placeholder || 'Selecione...'}</option>`;
-            for (const it of items || []) {
-                opts += `<option value="${it.id}">${it.text}</option>`;
-            }
-            $select.html(opts);
-        }
-
-        function carregarSistemas($selectSistema) {
-            return $.getJSON(UG_URL_GET_SISTEMAS)
-                .then(sistemas => {
-                    popularSelect($selectSistema, sistemas, 'Selecione...');
-                })
-                .catch(() => {
-                    popularSelect($selectSistema, [], 'Erro ao carregar sistemas');
-                });
-        }
-
-        function carregarGruposPorSistema(cdsistema, $selectGrupo) {
-            if (!cdsistema) {
-                $selectGrupo.prop('disabled', true).html('<option value="">Selecione um sistema primeiro...</option>');
-                return Promise.resolve();
-            }
-            return $.getJSON(UG_URL_GET_GRUPOS, { cdsistema })
-                .then(grupos => {
-                    if (grupos && grupos.length) {
-                        popularSelect($selectGrupo, grupos, 'Selecione...');
-                        $selectGrupo.prop('disabled', false);
-                    } else {
-                        $selectGrupo.prop('disabled', true).html('<option value="">Nenhum grupo encontrado para o sistema.</option>');
-                    }
-                })
-                .catch(() => {
-                    $selectGrupo.prop('disabled', true).html('<option value="">Erro ao carregar grupos.</option>');
-                });
-        }
-
-        // NOVO: Array para armazenar seleções
-        let selecionados = [];
-
-        // NOVO: Função para atualizar estado do botão enviar
-        function atualizarBotaoEnviar() {
-            const btn = $('#btnEnviarSelecionados');
-            if (selecionados.length > 0) {
-                btn.prop('disabled', false);
-                btn.attr('title', `Enviar ${selecionados.length} item(ns) selecionado(s)`);
-            } else {
-                btn.prop('disabled', true);
-                btn.attr('title', 'Enviar Selecionados');
-            }
-        }
-
-        // NOVO: Função para adicionar/remover seleção
-        function toggleSelecao(cdSistema, cdFuncao, isChecked) {
-            const id = `${cdSistema}_${cdFuncao}`;
-
-            if (isChecked) {
-                if (!selecionados.find(s => s.id === id)) {
-                    selecionados.push({ id, cdSistema, cdFuncao });
-                }
-            } else {
-                selecionados = selecionados.filter(s => s.id !== id);
-            }
-
-            $('#hidSelecionados').val(JSON.stringify(selecionados));
-            atualizarBotaoEnviar();
-        }
-
-        // DataTable
-        let dt;
-        $(document).ready(function () {
-
-            $('#btnVoltar').on('click', function (e) {
-                e.preventDefault();
-                window.location.href = '@Url.Action("Index", "Usuario", new { area = "SEG" })';
-            });
-
-            const cdUsuario = $('#hidCdUsuario').val();
-
-            // INIT do DataTable
-            dt = $('#tblGrupos').DataTable({
-                lengthChange: false,
-                processing: true,
-                serverSide: false,
-                responsive: true,
-                autoWidth: false,
-
-                layout: { topStart: { buttons: ['excel', 'csv', 'pdf', 'print'] } },
-
-                dom: '<"row"<"col-sm-12"tr>>'
-                   + '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
-
+            // Cria/atualiza DataTable
+            const table = $('#grid-usuarios').DataTable({
                 ajax: {
-                    url: '@Url.Action("GetData", "UsuarioGrupo", new { area = "SEG" })',
-                    type: 'GET',
-                    data: function (d) { d.cdUsuarioID = cdUsuario; },
+                    url: urlGetData,
                     dataSrc: function (json) {
-                        if (json.error) {
-                            console.error('Erro no servidor:', json.error);
-                            alert('Erro ao carregar dados: ' + json.error);
-                            return [];
-                        }
-                        return json;
+                        // Espera { data: [...] }. Qualquer formato diferente, tente normalizar aqui.
+                        return Array.isArray(json?.data) ? json.data : [];
                     }
                 },
-
+                processing: true,
+                deferRender: true,
+                lengthChange: true,
+                pageLength: 25,
+                order: [[0, 'asc']],
                 columns: [
-                    {   // 0) Checkbox
-                        data: null, orderable: false, searchable: false, className: 'dt-check',
-                        width: '50px',
-                        defaultContent: '',
-                        render: function (data, type, row) {
-                            const checkboxId = `chk_${row.Sistema}_${row.Grupo}`;
-                            return `<input type="checkbox" class="form-check-input row-checkbox" id="${checkboxId}" data-sistema="${row.Sistema}" data-funcao="${row.Grupo}" />`;
-                        }
-                    },
-                    { data: 'Sistema', title: 'Sistema', width: '80px' },
-                    { data: 'Grupo', title: 'Grupo', width: '120px' },
-                    { data: 'DescricaoGrupo', title: 'Descrição do Grupo', width: 'auto' },
+                    { data: 'cdusuario', width: 120 },
+                    { data: 'dcusuario' },
+                    { data: 'email_usuario' },
                     {
-                        data: 'Inicio', title: 'Início', width: '100px',
-                        render: function (data) { return fmtDate(data); }
-                    },
-                    {
-                        data: 'Fim', title: 'Fim', width: '100px',
-                        render: function (data) { return fmtDate(data); }
-                    },
-                    {   // 6) Ações
-                        data: null, orderable: false, searchable: false, className: 'dt-actions',
-                        width: '100px',
-                        defaultContent: '',
+                        data: null,
+                        orderable: false,
+                        className: 'text-center',
                         render: function (data, type, row) {
+                            const id   = row.cdusuario ?? row.Cdusuario ?? '';
+                            const nome = (row.dcusuario ?? row.Dcusuario ?? '').toString();
+
                             return `
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <button type="button" class="btn btn-outline-warning btn-edit"
-                                            data-sistema="${row.Sistema}" data-grupo="${row.Grupo}" title="Editar">
-                                        <i class="fa fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-danger btn-delete"
-                                            data-sistema="${row.Sistema}" data-grupo="${row.Grupo}" title="Excluir">
-                                        <i class="fa fa-trash"></i>
-                                    </button>
-                                </div>
-                            `;
+                              <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary js-grupos"
+                                        title="Grupos do usuário"
+                                        data-id="${id}" data-nome="${_.escape ? _.escape(nome) : nome}">
+                                  <i class="fa-solid fa-layer-group"></i>
+                                </button>
+                                <a class="btn btn-outline-secondary" href="${urlDetails(id)}" title="Detalhes">
+                                  <i class="fa-solid fa-list"></i>
+                                </a>
+                                <a class="btn btn-outline-success" href="${urlEdit(id)}" title="Editar">
+                                  <i class="fa-solid fa-pen"></i>
+                                </a>
+                              </div>`;
                         }
                     }
                 ],
+                language: window.DT_LANG_PTBR || {} // mantém seu padrão de tradução se existir
+            });
 
-                initComplete: function () {
-                    const api = this.api();
+            // Busca rápida
+            $('#usr-search').on('keyup change', function () {
+                table.search(this.value).draw();
+            });
 
-                    $('#tableSearch').on('keyup change', function () {
-                        const val = this.value;
-                        api.search(val).draw();
-                        $('#clearSearch').toggleClass('show', val.length > 0);
+            // Botão "Grupos" — dispara seu barramento de ações ou usa fallback
+            $('#grid-usuarios').on('click', '.js-grupos', function () {
+                const id   = this.dataset.id;
+                const nome = this.dataset.nome || '';
+
+                // 1) Com DTUtil (padrão já existente)
+                if (window.DTUtil && DTUtil.actions && typeof DTUtil.actions.trigger === 'function') {
+                    DTUtil.actions.trigger('Usuario', 'gotoUserGr', {
+                        id: id,
+                        // >>> evita "meta is not defined"
+                        meta: { cdUsuario: id, nome: nome }
                     });
-
-                    $('#clearSearch').on('click', function () {
-                        $('#tableSearch').val('');
-                        api.search('').draw();
-                        $(this).removeClass('show');
-                    });
-                }
-            });
-
-            // Seleções
-            $(document).on('change', '.row-checkbox', function () {
-                const $this = $(this);
-                const cdSistema = $this.data('sistema');
-                const cdFuncao = $this.data('funcao');
-                const isChecked = $this.is(':checked');
-
-                toggleSelecao(cdSistema, cdFuncao, isChecked);
-
-                const totalCheckboxes = $('.row-checkbox').length;
-                const checkedCheckboxes = $('.row-checkbox:checked').length;
-                const checkAll = $('.js-check-all');
-
-                if (checkedCheckboxes === 0) {
-                    checkAll.prop('indeterminate', false).prop('checked', false);
-                } else if (checkedCheckboxes === totalCheckboxes) {
-                    checkAll.prop('indeterminate', false).prop('checked', true);
-                } else {
-                    checkAll.prop('indeterminate', true);
-                }
-            });
-
-            $(document).on('change', '.js-check-all', function () {
-                const isChecked = $(this).is(':checked');
-                $('.row-checkbox').each(function () {
-                    const $checkbox = $(this);
-                    $checkbox.prop('checked', isChecked);
-                    toggleSelecao($checkbox.data('sistema'), $checkbox.data('funcao'), isChecked);
-                });
-            });
-
-            $('#btnEnviarSelecionados').on('click', function () {
-                if (selecionados.length === 0) {
-                    alert('Nenhum item selecionado.');
                     return;
                 }
-                const primeiro = selecionados[0];
-                $('#hidSistemaSel').val(primeiro.cdSistema);
-                $('#hidFuncaoSel').val(primeiro.cdFuncao);
-                $('#frmHidden').submit();
+
+                // 2) Fallback (sem DTUtil/actions): navega para a rota do modal
+                gotoUserGroupsFallback(id);
             });
-
-            // Clique na linha → preenche hiddens
-            $(document).on('click', '#tblGrupos tbody tr', function (e) {
-                if ($(e.target).closest('button, .btn, input[type="checkbox"]').length) return;
-                const data = dt.row(this).data();
-                if (!data) return;
-                $('#hidSistemaSel').val(data.Sistema);
-                $('#hidFuncaoSel').val(data.Grupo);
-            });
-
-            // Clique nos botões de ação → também preenche hiddens
-            $(document).on('click', '.btn-edit, .btn-delete', function (e) {
-                e.stopPropagation();
-                $('#hidSistemaSel').val($(this).data('sistema'));
-                $('#hidFuncaoSel').val($(this).data('grupo'));
-            });
-
-            /* ======================
-               BOTÃO NOVO: modo create
-            =======================*/
-            $('#btnNovo').on('click', function () {
-                $('#mode').val('create');
-                $('#modalTitulo').text('Incluir grupo ao usuário');
-                $('#OrigCdSistema').val('');
-                $('#OrigCdGrUser').val('');
-                $('#frmNovo')[0].reset();
-
-                const $sis = $('#CdSistema');
-                const $grp = $('#CdGrUser');
-
-                // Habilita selects e reseta grupo
-                $sis.prop('disabled', false);
-                $grp.prop('disabled', true).html('<option value="">Selecione um sistema primeiro...</option>');
-
-                // Datas padrão
-                const hoje = new Date().toISOString().substring(0, 10);
-                $('#DtIniVal').val(hoje);
-                $('#DtFimVal').val('');
-
-                // Carrega sistemas
-                carregarSistemas($sis).then(() => {
-                    // nada além de popular
-                });
-
-                $('#modalNovo').modal('show');
-            });
-
-            // Exportações
-            $('#exportExcel').on('click', function () { dt.button('.buttons-excel').trigger(); });
-            $('#exportCsv').on('click',   function () { dt.button('.buttons-csv').trigger();   });
-            $('#exportPdf').on('click',   function () { dt.button('.buttons-pdf').trigger();   });
-            $('#exportPrint').on('click', function () { dt.button('.buttons-print').trigger(); });
-        });
-
-        /* ======================
-           EDITAR: abre modal
-        =======================*/
-        $(document).on('click', '.btn-edit', function () {
-            const btn = $(this);
-            const cdSis = btn.data('sistema');
-            const cdGrp = btn.data('grupo');
-
-            $.ajax({
-                url: '@Url.Action("GetData", "UsuarioGrupo", new { area = "SEG" })',
-                type: 'GET',
-                data: { cdUsuarioID: $('#hidCdUsuario').val() },
-                success: function (data) {
-                    const registro = data.find(x => x.Sistema === cdSis && x.Grupo === cdGrp);
-
-                    if (!registro) {
-                        alert('Registro não encontrado.');
-                        return;
-                    }
-
-                    $('#mode').val('edit');
-                    $('#modalTitulo').text('Editar vínculo de grupo');
-                    $('#OrigCdSistema').val(cdSis);
-                    $('#OrigCdGrUser').val(cdGrp);
-
-                    const $sis = $('#CdSistema');
-                    const $grp = $('#CdGrUser');
-
-                    // Carrega sistemas, seleciona o sistema do registro e depois carrega grupos e seleciona o grupo
-                    carregarSistemas($sis).then(() => {
-                        $sis.val(registro.Sistema);
-                        return carregarGruposPorSistema(registro.Sistema, $grp);
-                    }).then(() => {
-                        $grp.val(registro.Grupo);
-
-                        // Em edição: bloquear selects (somente datas podem ser alteradas)
-                        $sis.prop('disabled', true);
-                        $grp.prop('disabled', true);
-
-                        // Datas
-                        $('#DtIniVal').val(registro.Inicio ? new Date(registro.Inicio).toISOString().split('T')[0] : '');
-                        $('#DtFimVal').val(registro.Fim ? new Date(registro.Fim).toISOString().split('T')[0] : '');
-
-                        $('#modalNovo').modal('show');
-                    });
-                },
-                error: function () { alert('Erro ao buscar dados do registro.'); }
-            });
-        });
-
-        /* ======================
-           ALTERA SISTEMA (CREATE)
-        =======================*/
-        $(document).on('change', '#CdSistema', function () {
-            const $grp = $('#CdGrUser');
-            const cdsistema = $(this).val();
-
-            // Só reage no modo create (no edit está desabilitado)
-            if ($('#mode').val() !== 'create') return;
-
-            carregarGruposPorSistema(cdsistema, $grp);
-        });
-
-        /* ======================
-           EXCLUIR
-        =======================*/
-        $(document).on('click', '.btn-delete', function () {
-            const btn = $(this);
-            const cdSis = btn.data('sistema');
-            const cdGrp = btn.data('grupo');
-            const cdUsuario = $('#hidCdUsuario').val();
-
-            if (!confirm(`Deseja realmente excluir o vínculo do sistema "${cdSis}" / grupo "${cdGrp}"?`)) {
-                return;
-            }
-
-            $.ajax({
-                url: '@Url.Action("Delete", "UsuarioGrupo", new { area = "SEG" })',
-                type: 'POST',
-                headers: { 'RequestVerificationToken': anti() },
-                data: { cdUsuario: cdUsuario, cdSistema: cdSis, cdGrUser: cdGrp },
-                success: function (response) {
-                    if (response.success) {
-                        $('#modalNovo').modal('hide');
-                        const api = $('#tblGrupos').DataTable();
-                        api.ajax.reload(null, false);
-                        alert('Registro excluído com sucesso.');
-                    } else {
-                        alert(response.message || 'Erro ao excluir registro.');
-                    }
-                },
-                error: function (xhr) { alert(xhr.responseJSON?.message || 'Erro ao excluir registro.'); }
-            });
-        });
-
-        /* ======================
-           SUBMIT (CREATE/UPDATE)
-        =======================*/
-        $('#frmNovo').on('submit', function (e) {
-            e.preventDefault();
-
-            const isEdit = $('#mode').val() === 'edit';
-            const url = isEdit
-                ? '@Url.Action("Update", "UsuarioGrupo", new { area = "SEG" })'
-                : '@Url.Action("Create", "UsuarioGrupo", new { area = "SEG" })';
-
-            // Valida selects (especialmente em create)
-            const $sis = $('#CdSistema');
-            const $grp = $('#CdGrUser');
-            let ok = true;
-
-            if (!$sis.prop('disabled') && !$sis.val()) { $sis.addClass('is-invalid'); ok = false; } else { $sis.removeClass('is-invalid'); }
-            if (!$grp.prop('disabled') && !$grp.val()) { $grp.addClass('is-invalid'); ok = false; } else { $grp.removeClass('is-invalid'); }
-            if (!ok) return;
-
-            const formData = {
-                cdUsuarioID: $('#CdUsuario').val(),
-                cdSistema:   $('#CdSistema').val(),
-                cdGrUser:    $('#CdGrUser').val(),
-                dtIniVal:    $('#DtIniVal').val() || null,
-                dtFimVal:    $('#DtFimVal').val() || null
-            };
-
-            if (isEdit) {
-                formData.origCdSistema = $('#OrigCdSistema').val();
-                formData.origCdGrUser  = $('#OrigCdGrUser').val();
-            }
-
-            $.ajax({
-                url: url,
-                type: 'POST',
-                headers: { 'RequestVerificationToken': anti() },
-                data: formData,
-                success: function (response) {
-                    if (response.success) {
-                        $('#modalNovo').modal('hide');
-                        const api = $('#tblGrupos').DataTable();
-                        api.ajax.reload(null, false);
-                        alert('Operação realizada com sucesso.');
-                    } else {
-                        alert(response.message || 'Erro ao salvar registro.');
-                    }
-                },
-                error: function (xhr) { alert(xhr.responseJSON?.message || 'Erro ao salvar registro.'); }
-            });
-        });
+        })();
     </script>
 }

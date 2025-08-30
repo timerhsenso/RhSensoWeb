@@ -83,16 +83,16 @@
             tokenField: 'deleteToken', // se a API devolver "token", o handler abaixo faz fallback
             exportName: 'SituacoesAuxiliares',
 
-            routes: {
-              list: '/SYS/Taux2/GetData',
-              createGet: '/SYS/Taux2/Create',
-              createPost: '/SYS/Taux2/Create',
-              editGet: '/SYS/Taux2/Edit/{id}',
-              editPost: '/SYS/Taux2/Edit/{id}',
+        routes: {
+          list: '/SYS/Taux2/GetData',
+          createGet: '/SYS/Taux2/Create',
+          createPost: '/SYS/Taux2/Create',
+        editGet: '/SYS/Taux2/Edit?token={editToken}', // ← ALTERAR para usar {editToken}
+        editPost: '/SYS/Taux2/Edit?token={editToken}', // ← ALTERAR para usar {editToken}
               deletePost: '/SYS/Taux2/DeleteByToken',
-              deleteBatchPost: '/SYS/Taux2/DeleteBatch',
-              updateAtivoPost: '/SYS/Taux2/UpdateAtivo'
-            },
+          deleteBatchPost: '/SYS/Taux2/DeleteBatch',
+          updateAtivoPost: '/SYS/Taux2/UpdateAtivo'
+        },
 
             // Colunas (a 1ª = seleção; a última = ações são geradas pelo DTUtil)
             fields: [

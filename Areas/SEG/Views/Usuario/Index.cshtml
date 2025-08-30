@@ -61,6 +61,7 @@
 @{
     var toggleUrl = Url.Action("UpdateAtivo", "Usuario", new { area = "SEG" });
 }
+
 <script>
   const TOGGLE_URL = '@toggleUrl';
 </script>
@@ -208,9 +209,32 @@
             .fail(xhr => (window.AppAjax ? AppAjax.handleError(xhr) : alert('Erro ao excluir.')));
           });
 
-          DTUtil.actions.on('Usuario', 'gotoUserGr', async ({ id/*, meta, dt, button */ }) => {
-            alert('detail ' + id);
-          });
+
+        DTUtil.actions.on('Usuario', 'gotoUserGr', async ({ id, meta, dt, button }) => {
+          try {
+            const rowData = dt.row($(button).closest('tr')).data();
+            const cdUsuario = rowData.cdusuario;
+            const nmUsuario = rowData.dcusuario;
+
+            const titulo = `Grupos de ${nmUsuario || cdUsuario}`;
+            const url = `/SEG/UsuarioGrupo/Modal?cdUsuario=${encodeURIComponent(cdUsuario)}&nmUsuario=${encodeURIComponent(nmUsuario || cdUsuario)}`;
+
+            // Verificar se o modal global existe
+            if (typeof window.openFormModal === 'function') {
+              window.openFormModal(url, titulo);
+            } else {
+              // Fallback: abrir em nova janela
+              window.open(url, '_blank');
+            }
+          } catch (err) {
+            console.error('Erro ao abrir modal:', err);
+            toastr.error('Falha ao abrir os grupos do usuário.');
+          }
+        });
+
+
+
+
 
           // ==========================================
           // 4) Busca / limpeza de busca (já usava)
@@ -219,6 +243,86 @@
           DTUtil.bindClearSearch('#btnLimpaPesquisa', '#searchGrid', '#gridUsuario', { reload: true, resetPaging: true });
         });
     </script>
+
+
+    //
+
+    <script>
+// --- Fallback de toastr (caso a lib não esteja carregada nesta tela) ---
+window.toastr = window.toastr || {
+  error:  (m)=>alert(m),
+  success:(m)=>alert(m),
+  info:   (m)=>alert(m),
+  warning:(m)=>alert(m)
+};
+
+// --- Modal genérico (Bootstrap 5) ---
+// Carrega uma URL (partial) no corpo do modal e exibe.
+window.openFormModal = async function (url, title) {
+  const modalEl = document.getElementById('formModal');
+  if (!modalEl) { alert('Container #formModal não encontrado.'); return; }
+
+  // título + spinner
+  const lbl  = modalEl.querySelector('#formModalLabel');
+  const body = modalEl.querySelector('#formModalBody');
+  if (lbl)  lbl.textContent = title || 'Formulário';
+  if (body) {
+    body.innerHTML = `
+      <div class="d-flex justify-content-center my-4">
+        <div class="spinner-border" role="status" aria-hidden="true"></div>
+        <span class="visually-hidden">Carregando...</span>
+      </div>`;
+  }
+
+  try {
+    const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const html = await resp.text();
+    if (body) body.innerHTML = html;
+  } catch (e) {
+    if (body) body.innerHTML = `<div class="alert alert-danger">
+      Não foi possível carregar o formulário.</div>`;
+  }
+
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static' });
+  bsModal.show();
+};
+
+// --- Ação "Grupos do Usuário" no grid ---
+DTUtil.actions.on('Usuario', 'gotoUserGr', async ({ id, meta, dt, button }) => {
+  try {
+    // 1) tenta DataTables pela linha do botão
+    let rowData = null;
+    if (dt && button && typeof dt.row === 'function' && window.jQuery) {
+      const $tr = window.jQuery(button).closest('tr');
+      rowData = $tr ? dt.row($tr).data() : null;
+    }
+    // 2) fallback: meta.row ou meta direto
+    rowData = rowData || meta?.row || meta || {};
+
+    // 3) valores com tolerância a casing/nomes
+    const cdUsuario = (id
+      ?? rowData.cdusuario ?? rowData.Cdusuario ?? rowData.CDUSUARIO ?? ''
+    ).toString().trim();
+
+    const nmUsuario = (
+      rowData.dcusuario ?? rowData.Dcusuario ?? rowData.nome ?? ''
+    ).toString().trim();
+
+    if (!cdUsuario) {
+      toastr.error('Não foi possível identificar o usuário selecionado.');
+      return;
+    }
+
+    const titulo = `Grupos de ${nmUsuario || cdUsuario}`;
+    const url = `/SEG/UsuarioGrupo/Modal?cdUsuario=${encodeURIComponent(cdUsuario)}&nmUsuario=${encodeURIComponent(nmUsuario || cdUsuario)}`;
+
+    openFormModal(url, titulo);
+  } catch (err) {
+    console.error(err);
+    toastr.error('Falha ao abrir os grupos do usuário.');
+  }
+});
+</script>
 
 
 }

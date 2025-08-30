@@ -1,0 +1,251 @@
+@{
+    Layout = null;
+    var cdUsuario = ViewData["CdUsuario"]?.ToString() ?? "";
+    var nmUsuario = ViewData["NmUsuario"]?.ToString() ?? cdUsuario;
+}
+
+<div id="usrGrModalRoot"
+     data-user="@cdUsuario"
+     data-name="@nmUsuario">
+
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <strong>Usuário:</strong> <span id="uNome">@nmUsuario</span>
+        <span class="text-muted">(@cdUsuario)</span>
+    </div>
+
+    <div class="row g-3 align-items-end mb-3">
+        <div class="col-12 col-md-4">
+            <label class="form-label">Sistema</label>
+            <select id="selSistema" class="form-select">
+                <option value="">Carregando...</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-4">
+            <label class="form-label">Grupo</label>
+            <select id="selGrupo" class="form-select" disabled>
+                <option value="">Selecione um sistema</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Início</label>
+            <input id="dtIni" type="date" class="form-control">
+        </div>
+        <div class="col-6 col-md-2">
+            <label class="form-label">Fim</label>
+            <input id="dtFim" type="date" class="form-control">
+        </div>
+
+        <div class="col-12 d-flex justify-content-end">
+            <button id="btnIncluir" type="button" class="btn btn-success">
+                <i class="fa fa-plus me-1"></i> Incluir
+            </button>
+        </div>
+    </div>
+
+    <div id="alertBox" class="alert d-none" role="alert"></div>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-striped align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 120px;">Sistema</th>
+                    <th style="width: 140px;">Grupo</th>
+                    <th>Descrição do grupo</th>
+                    <th style="width: 120px;">Início</th>
+                    <th style="width: 120px;">Fim</th>
+                    <th style="width: 90px;">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="gridBody">
+                <tr><td colspan="6" class="text-center text-muted py-4">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const root  = document.getElementById('usrGrModalRoot');
+        const cdUsu = root?.dataset.user || '';
+        const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+
+        const selSistema = document.getElementById('selSistema');
+        const selGrupo   = document.getElementById('selGrupo');
+        const dtIni      = document.getElementById('dtIni');
+        const dtFim      = document.getElementById('dtFim');
+        const btnIncluir = document.getElementById('btnIncluir');
+        const gridBody   = document.getElementById('gridBody');
+        const alertBox   = document.getElementById('alertBox');
+
+        const URLS = {
+            sistemas: '@Url.Action("GetSistemas", "UsuarioGrupo", new { area = "SEG" })',
+            gruposBySis: '@Url.Action("GetGruposBySistema", "UsuarioGrupo", new { area = "SEG" })',
+            listByUser: '@Url.Action("GetByUser", "UsuarioGrupo", new { area = "SEG" })',
+            create: '@Url.Action("Create", "UsuarioGrupo", new { area = "SEG" })',
+            del: '@Url.Action("Delete", "UsuarioGrupo", new { area = "SEG" })'
+        };
+
+        function showAlert(msg, type = 'danger') {
+            alertBox.className = `alert alert-${type}`;
+            alertBox.textContent = msg;
+            alertBox.classList.remove('d-none');
+            setTimeout(() => alertBox.classList.add('d-none'), 4000);
+        }
+
+        async function fetchJson(url, opt = {}) {
+            const resp = await fetch(url, opt);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            return await resp.json();
+        }
+
+        async function loadSistemas() {
+            selSistema.disabled = true;
+            selSistema.innerHTML = `<option value="">Carregando...</option>`;
+            try {
+                const list = await fetchJson(URLS.sistemas);
+                selSistema.innerHTML = `<option value="">Selecione...</option>` +
+                    list.map(s => `<option value="${s.cdSistema}">${s.cdSistema} - ${s.nome}</option>`).join('');
+                selSistema.disabled = false;
+            } catch {
+                selSistema.innerHTML = `<option value="">Falha ao carregar</option>`;
+                showAlert('Não foi possível carregar os sistemas.');
+            }
+        }
+
+        async function loadGrupos(cdsis) {
+            selGrupo.disabled = true;
+            selGrupo.innerHTML = `<option value="">Carregando...</option>`;
+            try {
+                const url = `${URLS.gruposBySis}?cdSistema=${encodeURIComponent(cdsis)}`;
+                const list = await fetchJson(url);
+                selGrupo.innerHTML = `<option value="">Selecione...</option>` +
+                    list.map(g => `<option value="${g.cdGrUser}">${g.cdGrUser} - ${g.dcGrUser ?? ''}</option>`).join('');
+                selGrupo.disabled = false;
+            } catch {
+                selGrupo.innerHTML = `<option value="">Falha ao carregar</option>`;
+                showAlert('Não foi possível carregar os grupos do sistema.');
+            }
+        }
+
+        async function loadGrid() {
+            gridBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Carregando...</td></tr>`;
+            try {
+                const url = `${URLS.listByUser}?cdUsuario=${encodeURIComponent(cdUsu)}`;
+                const rows = await fetchJson(url);
+
+                if (!rows || rows.length === 0) {
+                    gridBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Sem vínculos.</td></tr>`;
+                    return;
+                }
+
+                gridBody.innerHTML = rows.map(r => `
+                    <tr data-sis="${r.cdSistema}" data-gr="${r.cdGrUser}">
+                        <td><code>${r.cdSistema}</code></td>
+                        <td><code>${r.cdGrUser}</code></td>
+                        <td>${r.dcGrUser ?? ''}</td>
+                        <td>${r.dtIniVal || ''}</td>
+                        <td>${r.dtFimVal || ''}</td>
+                        <td class="text-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-danger btnDel" title="Excluir">
+                              <i class="fa fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch {
+                gridBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger py-4">Falha ao carregar.</td></tr>`;
+                showAlert('Não foi possível carregar os grupos do usuário.');
+            }
+        }
+
+        async function incluir() {
+            const cdSistema = selSistema.value?.trim();
+            const cdGrUser  = selGrupo.value?.trim();
+            const ini = dtIni.value || null;
+            const fim = dtFim.value || null;
+
+            if (!cdSistema) return showAlert('Selecione um sistema.', 'warning');
+            if (!cdGrUser)  return showAlert('Selecione um grupo.', 'warning');
+
+            const body = new URLSearchParams();
+            body.set('cdUsuario', cdUsu);
+            body.set('cdSistema', cdSistema);
+            body.set('cdGrUser', cdGrUser);
+            if (ini) body.set('dtIniVal', ini);
+            if (fim) body.set('dtFimVal', fim);
+
+            try {
+                const resp = await fetch(URLS.create, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'RequestVerificationToken': token
+                    },
+                    body: body.toString()
+                });
+                const json = await resp.json();
+                if (!resp.ok || json?.success === false) throw new Error(json?.message || 'Erro');
+                showAlert('Vínculo incluído com sucesso!', 'success');
+                await loadGrid();
+            } catch (e) {
+                showAlert(e.message || 'Erro ao incluir vínculo.');
+            }
+        }
+
+        async function excluir(targetBtn) {
+            const tr = targetBtn.closest('tr');
+            if (!tr) return;
+            const sis = tr.dataset.sis;
+            const grp = tr.dataset.gr;
+            if (!confirm(`Excluir vínculo ${sis}/${grp}?`)) return;
+
+            const body = new URLSearchParams();
+            body.set('cdUsuario', cdUsu);
+            body.set('cdSistema', sis);
+            body.set('cdGrUser', grp);
+
+            try {
+                const resp = await fetch(URLS.del, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'RequestVerificationToken': token
+                    },
+                    body: body.toString()
+                });
+                const json = await resp.json();
+                if (!resp.ok || json?.success === false) throw new Error(json?.message || 'Erro');
+                tr.remove();
+            } catch {
+                showAlert('Erro ao excluir vínculo.');
+            }
+        }
+
+        selSistema.addEventListener('change', e => {
+            const v = e.target.value;
+            if (v) loadGrupos(v);
+            else {
+                selGrupo.innerHTML = `<option value="">Selecione um sistema</option>`;
+                selGrupo.disabled = true;
+            }
+        });
+
+        btnIncluir.addEventListener('click', incluir);
+
+        gridBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btnDel');
+            if (btn) excluir(btn);
+        });
+
+        try {
+            const title = document.getElementById('formModalLabel');
+            if (title && root?.dataset.name) {
+                title.textContent = `Grupos de ${root.dataset.name}`;
+            }
+        } catch { }
+
+        loadSistemas().then(loadGrid);
+    })();
+</script>
