@@ -15,7 +15,7 @@ select * from tsistema
 select * from tuse1
 
 /* tabele do usuario com o grupo do usuario */
-select * from usrh1
+select * from usrh1 where cdusuario = 'verusa' order by dtfimval 
 
 /**/
 select * from btfuncao
@@ -24,7 +24,7 @@ select * from btfuncao
 select * from fucn1
 
 /* grupos */
-select * from gurh1
+select * from gurh1 where cdsistema = 'RHU'
 
 select * from hbrh1
 
