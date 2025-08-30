@@ -19,7 +19,7 @@ Atualize a `ConnectionStrings` no arquivo `appsettings.json` com as suas credenc
 
 ```json
 "ConnectionStrings": {
-  "DefaultConnection": "Server=192.168.17.2;Database=bd_rhu_copenor;User Id=sa;Password=*#oM0LoG@c@0;TrustServerCertificate=true;"
+  "DefaultConnection": "Server=1x2.xxx.x7.2;Database=bd_rhu_copenor;User Id=sa;Password=*#@0;TrustServerCertificate=true;"
 }
 ```
 
